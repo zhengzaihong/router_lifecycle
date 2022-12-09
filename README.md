@@ -157,7 +157,7 @@
 	  @override
 	  void dispose() {
 		super.dispose();
-		router.removeTabs(pageList.hashCode);
+		router.removeTabs(pageList.hashCode); //推出容器类型页面时 注意回收子页面
 	  }
 
 	  @override
@@ -229,6 +229,9 @@
 
   4.2 页面的关闭使用 router.pop(context);
   
+其他：
+ 
+
 
 效果如下：
 
