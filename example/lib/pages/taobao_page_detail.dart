@@ -36,13 +36,19 @@ class _TaoBaoPageDetailState extends State<TaoBaoPageDetail>  with LifeCycle{
     setState(() {
 
     });
-    print("--------TaoBaoPageDetail 得到焦点");
+    print("--------TaoBaoPageDetail onResume");
 
   }
 
   @override
   void onPause() {
     super.onPause();
-    print("--------TaoBaoPageDetail 失去焦点");
+    print("--------TaoBaoPageDetail onPause");
+  }
+
+  @override
+  void onDestroy() {
+    super.onDestroy();
+    print("--------TaoBaoPageDetail onDestroy");
   }
 }

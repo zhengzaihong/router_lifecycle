@@ -33,12 +33,17 @@ class _JdPageState extends State<JdPage> with LifeCycle {
   @override
   void onResume() {
     super.onResume();
-    print("--------JdPage 得到焦点");
+    print("--------JdPage onResume");
   }
 
   @override
   void onPause() {
     super.onPause();
-    print("--------JdPage 失去焦点");
+    print("--------JdPage onPause");
+  }
+  @override
+  void onDestroy() {
+    super.onDestroy();
+    print("--------JdPage onDestroy");
   }
 }

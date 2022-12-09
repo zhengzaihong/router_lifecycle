@@ -5,11 +5,10 @@ import 'package:router_lifecycle_example/pages/login.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 class JdPageDetail extends StatefulLifeCycle {
+  JdPageDetail({Key? key}) : super(key: key);
 
-   JdPageDetail({Key? key}) : super(key: key);
-
+  @override
   State<StatefulWidget> getState() => _JdPageDetailState();
-
 }
 
 class _JdPageDetailState extends State<JdPageDetail> with LifeCycle{
@@ -29,7 +28,7 @@ class _JdPageDetailState extends State<JdPageDetail> with LifeCycle{
         children:  [
           Expanded(child:   Center(child:  GestureDetector(
             onTap: (){
-              router.push(page:  const Login());
+              router.push(page:   Login());
             },
             child:  const Text("京东详情页面"),
           ),))
@@ -41,11 +40,16 @@ class _JdPageDetailState extends State<JdPageDetail> with LifeCycle{
   @override
   void onResume() {
     super.onResume();
-    print("--------JdPageDetail 得到焦点");
+    print("--------JdPageDetail onResume");
   }
   @override
   void onPause() {
     super.onPause();
-    print("--------JdPageDetail 失去焦点");
+    print("--------JdPageDetail onPause");
+  }
+  @override
+  void onDestroy() {
+    super.onDestroy();
+    print("--------JdPageDetail onDestroy");
   }
 }

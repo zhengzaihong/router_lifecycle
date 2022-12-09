@@ -11,23 +11,27 @@ import 'package:flutter_router_forzzh/router_lib.dart';
 /// create_time: 09:12
 /// describe 提供给跳转界面的路由，要监听生命周期的 务必使用该路由跳转、关闭页面
 ///
-///
-typedef RoutePathCallBack = Widget Function(
-    String? routePath, Listenable listenable);
+typedef RoutePathCallBack = Future<void> Function(List<RouteSettings> configuration,List<Page> pages);
+
+typedef EixtStyleCallBack =  Future<bool> Function(BuildContext context);
 
 class RouterProxy extends RouterDelegate<List<RouteSettings>>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<List<RouteSettings>> {
 
+  RoutePathCallBack? routePathCallBack;
+  EixtStyleCallBack? styleCallBack;
+
+  RouterProxy({this.styleCallBack,this.routePathCallBack}):super();
 
   CustomParser defaultParser(){
-    return  const CustomParser();
+    return const CustomParser();
   }
-
 
   ///请不要将多个需要监听的导航列表设置相同的key
   final Map<Object, TabPageInfo> _navPages = HashMap();
 
   final List<Page> _pages = [];
+
   static final _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
@@ -36,7 +40,7 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
   @override
   List<Page> get currentConfiguration => List.of(_pages);
 
-  Widget? oldPage;
+  Widget? prePage;
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +53,10 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
         ));
   }
 
-  ///需要手动调用此方法，需同步 IndexedStack 或者 xxController.index下的page
+  ///需要手动调用此方法，需同步 IndexedStack 或者 TabBarView下 controller.index下的page
+  ///带有导航菜单类容器界面请使用 StatefulWidget 方便手动回收 removeTabs 界面。
   void setTabChange(Widget page, {Object? uniqueId}) {
-    if (page == oldPage) {
+    if (page == prePage) {
       return;
     }
     if (null != uniqueId) {
@@ -66,7 +71,7 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
   }
 
   bool _findGoTopPage(Object? uniqueId, Widget targetPage, TabPageInfo? info) {
-    // _pageOnPause(oldPage);
+    // _pageOnPause(prePage);
 
     int index = 0;
     for (var page in info?.pages ?? []) {
@@ -82,23 +87,24 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
       }
       index++;
     }
-    oldPage = targetPage;
+    prePage = targetPage;
     return false;
   }
 
   ///关闭页面，需要监听生命周期的务必使用此方法关闭
   void pop(BuildContext context) {
-    String widgetId = context.widget.hashCode.toString();
-    Page? materialPage = _findPage(widgetId);
+
+    String id = context.widget.hashCode.toString();
+    Page? materialPage = _findPage(id);
     if (materialPage != null) {
       _pages.remove(materialPage);
-      _pageOnPause((materialPage as MaterialPage).child);
+      _pageOnPause((materialPage as MaterialPage).child,destroy: true);
     }
 
     if (_pages.isNotEmpty) {
-      oldPage = (_pages.last as MaterialPage).child;
+      prePage = (_pages.last as MaterialPage).child;
     }
-    TabPageInfo? tabPageInfo = _isTabPage(oldPage);
+    TabPageInfo? tabPageInfo = _isTabPage(prePage);
     if (tabPageInfo != null) {
       ///如果是导航菜单，则检查最后一次点击子页面，让子页面走得到焦点
       TabPageInfo? info = _navPages[tabPageInfo.uniqueId];
@@ -107,15 +113,15 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
         _pageOnResume(tempPage);
       }
     } else {
-      _pageOnResume(oldPage);
+      _pageOnResume(prePage);
     }
     notifyListeners();
   }
 
-  Page? _findPage(String widgetId) {
+  Page? _findPage(String id) {
     Page? materialPage;
     for (var page in _pages) {
-      if (page.restorationId == widgetId) {
+      if (page.restorationId == id) {
         materialPage = page;
         break;
       }
@@ -125,8 +131,7 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
 
   @override
   Future<void> setNewRoutePath(List<RouteSettings> configuration) {
-    // print('setNewRoutePath ${configuration.last.name}');
-    return Future.value(null);
+    return routePathCallBack==null?Future.value(null): routePathCallBack!.call(configuration,_pages);
   }
 
   @override
@@ -136,34 +141,56 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
       Widget tempPage = (page as MaterialPage).child;
 
       if (_pages.isNotEmpty) {
-        oldPage = (_pages.last as MaterialPage).child;
+        prePage = (_pages.last as MaterialPage).child;
       } else {
-        oldPage = null;
+        prePage = null;
       }
 
       // print("监听到物理返回键");
-      TabPageInfo? tabPageInfo = _isTabPage(oldPage);
+      TabPageInfo? tabPageInfo = _isTabPage(prePage);
       if (tabPageInfo != null) {
         ///如果是导航菜单，则检查最后一次点击子页面，让子页面走得到焦点
         TabPageInfo? info = _navPages[tabPageInfo.uniqueId];
         if (info != null) {
-          Widget tempPage = info.pages[info.checkPageIndex];
-          _pageOnResume(tempPage);
+           Widget tabPage = info.pages[info.checkPageIndex];
+          _pageOnResume(tabPage);
         }
       } else {
-        _pageOnResume(oldPage);
+        _pageOnResume(prePage);
       }
 
-      _pageOnPause(tempPage);
+      _pageOnPause(tempPage,destroy: true);
       notifyListeners();
       return Future.value(true);
     }
-    return _confirmExit();
+
+    ///外部可仿照传入 styleCallBack定制推出样式
+    return styleCallBack ==null?Future.value(false):styleCallBack!.call(navigatorKey.currentContext!);
   }
 
-  bool canPop() {
-    return _pages.length > 1;
-  }
+  /// 例子：
+  ///   Future<bool> _confirmExit(BuildContext context) async {
+  ///     final result = await showDialog<bool>(
+  ///         context: context,
+  ///         builder: (context) {
+  ///           return AlertDialog(
+  ///             content: const Text('确定要退出App吗?'),
+  ///             actions: [
+  ///               TextButton(
+  ///                 child: const Text('取消'),
+  ///                 onPressed: () => Navigator.pop(context, true),
+  ///               ),
+  ///               TextButton(
+  ///                 child: const Text('确定'),
+  ///                 onPressed: () => Navigator.pop(context, false),
+  ///               ),
+  ///             ],
+  ///           );
+  ///         });
+  ///     return result ?? true;
+  ///   }
+
+  bool canPop() => _pages.length > 1;
 
   bool _onPopPage(Route route, dynamic result) {
     if (!route.didPop(result)) {
@@ -178,10 +205,10 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
         TabPageInfo? info = _navPages[tabPageInfo.uniqueId];
         if (info != null) {
           Widget tempPage = info.pages[info.checkPageIndex];
-          _pageOnPause(tempPage);
+          _pageOnPause(tempPage,destroy: true);
         }
       } else {
-        _pageOnPause(oldPage);
+        _pageOnPause(prePage,destroy: true);
       }
 
       if (_pages.isNotEmpty) {
@@ -208,9 +235,15 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
       String? name,
       Object? arguments,
       Duration duration = const Duration(milliseconds: 300)}) {
+
+
+    if (_pages.isNotEmpty) {
+      prePage = (_pages.last as MaterialPage).child;
+    }
+
     ///旧界面先失去焦点
-    if (oldPage != page && oldPage != null) {
-      TabPageInfo? tabPageInfo = _isTabPage(oldPage);
+    if (prePage != page && prePage != null) {
+      TabPageInfo? tabPageInfo = _isTabPage(prePage);
       if (tabPageInfo != null) {
         ///如果是导航菜单，则检查最后一次点击子页面，让子页面走得到焦点
         TabPageInfo? info = _navPages[tabPageInfo.uniqueId];
@@ -219,16 +252,13 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
           _pageOnPause(tempPage);
         }
       } else {
-        _pageOnPause(oldPage);
+        _pageOnPause(prePage);
       }
     }
 
     var routeSettings = RouteSettings(
-        name: name ?? page.runtimeType.toString(), arguments: arguments);
-
-    if (_pages.isNotEmpty) {
-      oldPage = (_pages.last as MaterialPage).child;
-    }
+        name: name ?? page.runtimeType.toString(),
+        arguments: arguments);
 
     ///展示新界面
     _pages.add(MaterialPage(
@@ -254,10 +284,10 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
 
         if (info.checkPageIndex < info.pages.length) {
           Widget page = info.pages[info.checkPageIndex];
-          oldPage = page;
+          prePage = page;
           _pageOnResume(page);
         } else {
-          print("检查初始化需要得到焦点的界面下标是否正确");
+          print("初始化页面下标越界");
         }
       }
       return;
@@ -319,7 +349,7 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     }
   }
 
-  void _pageOnPause(Widget? page) {
+  void _pageOnPause(Widget? page,{bool destroy = false}) {
     if (page == null) {
       return;
     }
@@ -327,11 +357,17 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     if (pageType == PageType.statefulLifeCycle) {
       var state = (page as StatefulLifeCycle).statefulState.getState();
       (state as LifeCycle).onPause();
+      if(destroy){
+        (state as LifeCycle).onDestroy();
+      }
       return;
     }
 
     if (pageType == PageType.statelessLifeCycle) {
       (page as LifeCycle).onPause();
+      if(destroy){
+        (page as LifeCycle).onDestroy();
+      }
       return;
     }
   }
@@ -358,34 +394,21 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
   void replace({required Widget page, String? name, Object? arguments}) {
     if (_pages.isNotEmpty) {
       Page page = _pages.removeLast();
-      _pageOnPause((page as MaterialPage).child);
+      _pageOnPause((page as MaterialPage).child,destroy: true);
+
     }
     push(page: page, name: name, arguments: arguments);
   }
 
-  Future<bool> _confirmExit() async {
-    final result = await showDialog<bool>(
-        context: navigatorKey.currentContext!,
-        builder: (context) {
-          return AlertDialog(
-            content: const Text('确定要退出App吗?'),
-            actions: [
-              TextButton(
-                child: const Text('取消'),
-                onPressed: () => Navigator.pop(context, true),
-              ),
-              TextButton(
-                child: const Text('确定'),
-                onPressed: () => Navigator.pop(context, false),
-              ),
-            ],
-          );
-        });
-    return result ?? true;
+
+  ///当退出容器tab 界面时回收内存
+   TabPageInfo? removeTabs(Object? uniqueId){
+    return _navPages.remove(uniqueId);
   }
 }
 
 enum PageType {
+
   ///没有实现监听的页面
   notLifeCycle,
 
@@ -394,6 +417,8 @@ enum PageType {
 
   ///监听StatelessWidget
   statelessLifeCycle,
+
+  ///页面类型的页面监听生命周期
   tabPage,
 }
 

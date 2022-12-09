@@ -1,18 +1,37 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_router_forzzh/router_lib.dart';
 import 'package:router_lifecycle_example/pages/nav_page.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 
-class Login extends StatefulWidget {
-  const Login({Key? key}) : super(key: key);
+class Login extends StatefulLifeCycle {
+
+  Login({Key? key}) : super(key: key);
 
   @override
-  _LoginState createState() => _LoginState();
+  State<StatefulWidget> getState() => _LoginState();
 }
 
-class _LoginState extends State<Login>{
+class _LoginState extends State<Login> with LifeCycle{
 
+
+  @override
+  void onResume() {
+    super.onResume();
+    print("--------Login onResume");
+  }
+  @override
+  void onPause() {
+    super.onPause();
+    print("--------Login onPause");
+  }
+
+  @override
+  void onDestroy() {
+    super.onDestroy();
+    print("--------Login onDestroy");
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -5,8 +5,8 @@ import 'package:router_lifecycle_example/router_helper.dart';
 
 
 class TaoBaoPage extends StatelessWidget with LifeCycle {
-  TaoBaoPage({Key? key}) : super(key: key);
 
+  TaoBaoPage({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,12 +31,18 @@ class TaoBaoPage extends StatelessWidget with LifeCycle {
   @override
   void onResume() {
     super.onResume();
-    print("--------TaoBaoPage 得到焦点");
+    print("--------TaoBaoPage onResume");
   }
 
   @override
   void onPause() {
     super.onPause();
-    print("--------TaoBaoPage 失去焦点");
+    print("--------TaoBaoPage onPause");
+  }
+
+  @override
+  void onDestroy() {
+    super.onDestroy();
+    print("--------TaoBaoPage onDestroy");
   }
 }
