@@ -7,6 +7,13 @@
 
  此工具库可快速让StatelessWidget、StatefulWidget具备Android中Activity/Fragment的 onResume、onPause、onDestroy的生命周期。
 
+# pubspec.yaml 依赖
+    dependencies:
+      flutter_router_forzzh: ^0.0.1
+
+#导包
+      import 'package:flutter_router_forzzh/router_lib.dart';
+
 ####1.第一步 MaterialApp.router 注册RouterProxy
 
     RouterProxy  router = RouterProxy();
@@ -230,6 +237,12 @@
   4.2 页面的关闭使用 router.pop(context);
   
 其他：
+
+ 1.styleCallBack可自定义推出程序提示框
+
+ 2.web端需要支持浏览器直接跳转访问某页面需要自定义routeInformationParser并继承 RouteParser类做解析器
+
+
  
 
 
