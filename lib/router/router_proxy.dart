@@ -13,13 +13,13 @@ import 'package:flutter_router_forzzh/router_lib.dart';
 ///
 typedef RoutePathCallBack = Future<void> Function(List<RouteSettings> configuration,List<Page> pages);
 
-typedef EixtStyleCallBack =  Future<bool> Function(BuildContext context);
+typedef ExitStyleCallBack =  Future<bool> Function(BuildContext context);
 
 class RouterProxy extends RouterDelegate<List<RouteSettings>>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<List<RouteSettings>> {
 
   RoutePathCallBack? routePathCallBack;
-  EixtStyleCallBack? styleCallBack;
+  ExitStyleCallBack? styleCallBack;
 
   RouterProxy({this.styleCallBack,this.routePathCallBack}):super();
 
@@ -244,6 +244,7 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     ///旧界面先失去焦点
     if (prePage != page && prePage != null) {
       TabPageInfo? tabPageInfo = _isTabPage(prePage);
+
       if (tabPageInfo != null) {
         ///如果是导航菜单，则检查最后一次点击子页面，让子页面走得到焦点
         TabPageInfo? info = _navPages[tabPageInfo.uniqueId];
@@ -332,10 +333,39 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     return null;
   }
 
+  Widget? _isWrapperPage(Widget? page) {
+    if (page == null) {
+      return null;
+    }
+    ///StatefulWidget
+    if (page is StatefulLifeCycle) {
+      State? state = page.statefulState.getState();
+      if (state is WrapperPage) {
+        Widget? wrapper= (state as WrapperPage).getChild();
+        return wrapper;
+      }
+      return null;
+    }
+
+    ///StatelessWidget
+    if (page is WrapperPage) {
+      Widget? wrapper= (page as WrapperPage).getChild();
+      return wrapper;
+    }
+    return null;
+  }
+
+
+
   void _pageOnResume(Widget? page) {
     if (page == null) {
       return;
     }
+    var tempPage = _isWrapperPage(page);
+    if(null!=tempPage){
+      _pageOnResume(tempPage);
+    }
+
     PageType pageType = _checkLifeCyclePage(page);
     if (pageType == PageType.statefulLifeCycle) {
       var state = (page as StatefulLifeCycle).statefulState.getState();
@@ -353,6 +383,11 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     if (page == null) {
       return;
     }
+    var tempPage = _isWrapperPage(page);
+    if(null!=tempPage){
+      _pageOnPause(tempPage);
+    }
+
     PageType pageType = _checkLifeCyclePage(page);
     if (pageType == PageType.statefulLifeCycle) {
       var state = (page as StatefulLifeCycle).statefulState.getState();

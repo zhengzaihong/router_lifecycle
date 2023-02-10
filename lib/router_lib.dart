@@ -7,4 +7,5 @@ export 'interfaces/lifecycle.dart';
 export 'interfaces/page_lifecycle.dart';
 export 'interfaces/stateful_lifecycle.dart';
 export 'interfaces/tabpage_observe.dart';
+export 'wrapper/wrapper_page.dart';
 

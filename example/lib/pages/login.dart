@@ -17,6 +17,10 @@ class _LoginState extends State<Login> with LifeCycle{
 
 
   @override
+  void initState() {
+    super.initState();
+  }
+  @override
   void onResume() {
     super.onResume();
     print("--------Login onResume");
