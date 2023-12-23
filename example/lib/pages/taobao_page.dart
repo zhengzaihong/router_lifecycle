@@ -1,15 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
+import 'package:flutter_router_forzzh/wrapper/life_cycle_page.dart';
 import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 
-class TaoBaoPage extends StatelessWidget with LifeCycle {
+class TaoBaoPage extends StatelessWidget {
 
   TaoBaoPage({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return LifeCyclePage(
+        onCreate: () {
+          print("--------TaoBaoPage onCreate");
+        },
+        onStart: () {
+          print("--------TaoBaoPage onStart");
+        },
+        onResume: () {
+          print("--------TaoBaoPage onResume");
+        },
+        onPause: () {
+          print("--------TaoBaoPage onPause");
+        },
+        onDestroy: () {
+          print("--------TaoBaoPage onDestroy");
+        },
+        child: Scaffold(
       body: Column(
         children: [
           Expanded(
@@ -25,24 +42,6 @@ class TaoBaoPage extends StatelessWidget with LifeCycle {
           )
         ],
       ),
-    );
-  }
-
-  @override
-  void onResume() {
-    super.onResume();
-    print("--------TaoBaoPage onResume");
-  }
-
-  @override
-  void onPause() {
-    super.onPause();
-    print("--------TaoBaoPage onPause");
-  }
-
-  @override
-  void onDestroy() {
-    super.onDestroy();
-    print("--------TaoBaoPage onDestroy");
+    ));
   }
 }

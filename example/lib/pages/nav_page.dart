@@ -5,14 +5,15 @@ import 'package:router_lifecycle_example/pages/jd_page.dart';
 import 'package:router_lifecycle_example/pages/taobao_page.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
-class NavPage extends StatefulLifeCycle {
+class NavPage extends StatefulWidget {
   NavPage({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> getState() => _NavPageState();
+  State<StatefulWidget> createState() => _NavPageState();
+
 }
 
-class _NavPageState extends State<NavPage> with TabPageObserve {
+class _NavPageState extends State<NavPage>{
   final List<HomeBottomMenuBean> _bottomNavList = [
     HomeBottomMenuBean("淘宝", "taobao_icon_1.png", "taobao_icon_2.png", 0),
     HomeBottomMenuBean("京东", "jd_icon_1.png", "jd_icon_2.png", 1),
@@ -23,19 +24,6 @@ class _NavPageState extends State<NavPage> with TabPageObserve {
     TaoBaoPage(),
     JdPage(),
   ];
-
-  ///导航容器 必须实现该回调。
-  @override
-  TabPageInfo onCreateTabPage() {
-    return TabPageInfo(
-        uniqueId: pageList.hashCode, pages: pageList, checkPageIndex: 0);
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    router.removeTabs(pageList.hashCode);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +39,6 @@ class _NavPageState extends State<NavPage> with TabPageObserve {
         onTap: (index) {
           setState(() {
             currentIndex = index;
-
-            ///通知路由 子页面生命周期发生变化
-            router.setTabChange(pageList[index], uniqueId: pageList.hashCode);
           });
         },
         selectedFontSize: 22,
