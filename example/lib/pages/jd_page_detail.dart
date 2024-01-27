@@ -1,7 +1,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
-import 'package:flutter_router_forzzh/wrapper/life_cycle_page.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
@@ -9,7 +8,7 @@ class JdPageDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LifeCyclePage(
+    return LifeCycle(
         onCreate: (){
           print("--------JdPageDetail onCreate");
         },
@@ -29,7 +28,8 @@ class JdPageDetail extends StatelessWidget {
       appBar: AppBar(
         leading: GestureDetector(
           onTap: (){
-            router.pop(context);
+            // router.pop(context);
+            router.pushNamed(name: 'TaoBaoPageDetail1',custom: true);
           },
           child: const Icon(Icons.arrow_back_ios,size: 30,color: Colors.red),
         ),

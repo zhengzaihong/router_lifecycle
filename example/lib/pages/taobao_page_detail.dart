@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
-import 'package:flutter_router_forzzh/wrapper/life_cycle_page.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 class TaoBaoPageDetail extends StatefulWidget {
@@ -17,7 +16,7 @@ class _TaoBaoPageDetailState extends State<TaoBaoPageDetail>{
   Widget build(BuildContext context) {
     return WillPopScope(
         onWillPop: onWillPop,
-        child: LifeCyclePage(
+        child: LifeCycle(
         onResume: (){
           setState(() {
             isResume  = true;
@@ -35,7 +34,7 @@ class _TaoBaoPageDetailState extends State<TaoBaoPageDetail>{
           appBar: AppBar(
             leading: GestureDetector(
               onTap: (){
-                router.pop(context);
+                router.pop();
               },
               child: const Icon(Icons.arrow_back_ios,size: 30,color: Colors.red),
             ),
@@ -62,7 +61,7 @@ class _TaoBaoPageDetailState extends State<TaoBaoPageDetail>{
 
   Future<bool> onWillPop() {
     if(router.isShowingModalBottomSheet(context)){
-      router.pop(context);
+      router.pop();
       return Future.value(false);
     }
     return Future.value(true);

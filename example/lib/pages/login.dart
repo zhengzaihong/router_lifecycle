@@ -1,8 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
-import 'package:flutter_router_forzzh/wrapper/life_cycle_page.dart';
 import 'package:router_lifecycle_example/pages/nav_page.dart';
+import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 
@@ -10,7 +10,7 @@ import 'package:router_lifecycle_example/router_helper.dart';
     const Login({Key? key}) : super(key: key);
     @override
     Widget build(BuildContext context) {
-      return LifeCyclePage(
+      return LifeCycle(
         onCreate: (){
           print("--------Login onCreate");
         },
@@ -52,7 +52,10 @@ import 'package:router_lifecycle_example/router_helper.dart';
                             side: BorderSide(
                                 color: Theme.of(context).primaryColor),
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            router.pushNamed(name: 'hhahaha');
+
+                          },
                           child: const Text(
                             '注册',
                             style: TextStyle(color: Colors.white),

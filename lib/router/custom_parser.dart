@@ -12,15 +12,26 @@ import 'package:flutter_router_forzzh/router/route_parser.dart';
 class CustomParser extends RouteParser {
 
   const CustomParser() : super();
+  //
+  // @override
+  // Future<List<RouteSettings>> parseRouteInformation(RouteInformation routeInformation) {
+  //   return Future.value(List.empty());
+  // }
+  //
+  // @override
+  // RouteInformation restoreRouteInformation(List<RouteSettings> configuration) {
+  //   final location = configuration.last.name;
+  //
+  //   return RouteInformation(location: location);
+  // }
 
   @override
-  Future<List<RouteSettings>> parseRouteInformation(RouteInformation routeInformation) {
-    return Future.value(List.empty());
+  Future<RouteInformation> parseRouteInformation(RouteInformation routeInformation) async {
+    return routeInformation;
   }
 
   @override
-  RouteInformation restoreRouteInformation(List<RouteSettings> configuration) {
-    final location = configuration.last.name;
-    return RouteInformation(location: location);
+  RouteInformation restoreRouteInformation(RouteInformation routeInformation) {
+    return routeInformation;
   }
 }

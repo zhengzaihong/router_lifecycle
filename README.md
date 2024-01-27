@@ -6,27 +6,45 @@
  有销毁时的 dispose() 回调，但对于检查前后台，和StatelessWidget做页面时将变得力不从心....
 
  此工具库可快速让StatelessWidget、StatefulWidget具备Android中Activity/Fragment的 onResume、onPause、onDestroy的生命周期。
+ 此库已将原来页面跳转工具和生命周期功能独立拆开，不再耦合。可分别使用。
 
 # pubspec.yaml 依赖
     dependencies:
-      flutter_router_forzzh: ^0.0.3
+      flutter_router_forzzh: ^0.0.4
 
-#导包
-      import 'package:flutter_router_forzzh/router_lib.dart';
+#### 导包 import 'package:flutter_router_forzzh/router_lib.dart';
 
-####1.第一步 MaterialApp.router 注册RouterProxy
+# 功能1：
 
-    RouterProxy  router = RouterProxy();
+#### 1.路由功能实现界面跳转。
+
+##### 顶层定义router方便全局使用。
+
+    RouterProxy router = RouterProxy.getInstance(
+        routePathCallBack: (routeInformation) {
+          ///自定义的动态路由 跳转
+          if (routeInformation.location == 'TaoBaoPageDetail1') {
+            return TaoBaoPageDetail();
+          }
+        },
+        pageMap: {
+          '/': const Login(),
+          'TaoBaoPageDetail':  TaoBaoPageDetail(),
+        },
+        exitStyleCallBack: (context){
+        return _confirmExit(context);
+      }
+    );
+
+
+##### 2.MaterialApp.router 注册RouterProxy
 
     void main() {
    	  runApp(MyApp());
    	}
    	
    	class MyApp extends StatelessWidget {
-   	  MyApp({Key? key}) : super(key: key) {
-   		router.push(page:  Login()); //第一个页面 
-   	  }
-   	
+   	  MyApp({Key? key}) : super(key: key)
    	  @override
    	  Widget build(BuildContext context) {
    		return MaterialApp.router(
@@ -38,15 +56,26 @@
    	  }
    	}
 
-####2.第二步对需要监听生命周期的页面实现接口
+
+    1 页面的跳转使用 router.push(); router.pushNamed()等
+    
+    2 页面的关闭使用 router.pop();
+
+
+
+# 功能2：
+
+#### 2.对需要监听生命周期的页面做任务。
+
 #####2.1 StatefulWidget页面：
+
 #####2.2 StatelessWidget页面：
 
 	class Login extends StatelessWidget {
     const Login({Key? key}) : super(key: key);
     @override
     Widget build(BuildContext context) {
-      return LifeCyclePage(
+      return LifeCycle(
         onCreate: (){
           print("--------Login onCreate");
         },
@@ -121,29 +150,14 @@
             ],
           )
       ));
-    }
-}
-
-
-##### 需要监听生命周期的子页面都需要同步骤2中 实现LifeCycle该接口
-  
-  1 页面的跳转使用 router.push(xxWidget);
-
-  2 页面的关闭使用 router.pop(context);
-
-
-#####5.当跳转的页面是包裹页面，而子页面才是真正需要监听的时是 需要用WrapperPage接口包裹下，且为直接子类
-
+    }}
 
 
 其他：
 
- 1.styleCallBack可自定义推出程序提示框
+ 1.exitStyleCallBack可自定义推出程序提示框
 
  2.web端需要支持浏览器直接跳转访问某页面需要自定义routeInformationParser并继承 RouteParser类做解析器
-
-
- 
 
 
 效果如下：

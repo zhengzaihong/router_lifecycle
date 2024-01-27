@@ -9,8 +9,8 @@ import 'VisibilityDetector.dart';
 /// create_time: 14:17
 /// describe: 监听组件焦点
 ///
-class LifeCyclePage extends StatefulWidget {
-  const LifeCyclePage({
+class LifeCycle extends StatefulWidget {
+  const LifeCycle({
     required this.child,
     this.onCreate,
     this.onStart,
@@ -42,10 +42,10 @@ class LifeCyclePage extends StatefulWidget {
   final VoidCallback? onDestroy;
 
   @override
-  _LifeCyclePageState createState() => _LifeCyclePageState();
+  _LifeCycleState createState() => _LifeCycleState();
 }
 
-class _LifeCyclePageState extends State<LifeCyclePage>
+class _LifeCycleState extends State<LifeCycle>
     with WidgetsBindingObserver {
   final _visibilityDetectorKey = UniqueKey();
 

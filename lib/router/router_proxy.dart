@@ -2,38 +2,72 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
 
+
 ///
 /// create_user: zhengzaihong
 /// Email:1096877329@qq.com
 /// create_date: 2022-12-05
 /// create_time: 09:12
-/// describe 提供给跳转界面的路由，要监听生命周期的 务必使用该路由跳转、关闭页面
+/// describe 基于路由2.0实现界面跳转
 ///
-typedef RoutePathCallBack = Future<void> Function(
-    List<RouteSettings> configuration, List<Page> pages);
+typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
+// typedef RoutePathCallBack = Future<void> Function(List<RouteSettings> configuration, List<Page> pages);
 
 typedef ExitStyleCallBack = Future<bool> Function(BuildContext context);
 
-class RouterProxy extends RouterDelegate<List<RouteSettings>>
-    with ChangeNotifier, PopNavigatorRouterDelegateMixin<List<RouteSettings>> {
-  RoutePathCallBack? routePathCallBack;
-  ExitStyleCallBack? styleCallBack;
+// class RouterProxy extends RouterDelegate<List<RouteSettings>> with ChangeNotifier, PopNavigatorRouterDelegateMixin<List<RouteSettings>> {
 
-  RouterProxy({this.styleCallBack, this.routePathCallBack}) : super();
+class RouterProxy extends RouterDelegate<RouteInformation>
+    with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
+
+  /// 可用于动态路由实现跳转
+  RoutePathCallBack? routePathCallBack;
+
+  /// 移动端退出程序时自定义页面的回调
+  ExitStyleCallBack? exitStyleCallBack;
+
+  /// 静态路由的页面
+  Map? pageMap = {};
+
+  /// 当前路由的名称 用web浏览器中
+  String? _location;
+
+  /// 具体的页面集
+  final List<Page> _pages = [];
+
+  static final _navigatorKey = GlobalKey<NavigatorState>();
+
+  RouterProxy._({this.exitStyleCallBack, this.routePathCallBack, this.pageMap}) : super(){
+    pageMap?.forEach((key, value) {
+      _pages.add(MaterialPage(child: value));
+    });
+  }
+
+  static RouterProxy? _instance;
+  static RouterProxy getInstance(
+      {RoutePathCallBack? routePathCallBack,
+      ExitStyleCallBack? exitStyleCallBack,
+      Map? pageMap}) {
+    _instance ??= RouterProxy._(
+        routePathCallBack: routePathCallBack,
+        exitStyleCallBack: exitStyleCallBack,
+        pageMap: pageMap);
+    return _instance!;
+  }
 
   CustomParser defaultParser() {
     return const CustomParser();
   }
 
-  final List<Page> _pages = [];
-
-  static final _navigatorKey = GlobalKey<NavigatorState>();
+  // @override
+  // List<Page> get currentConfiguration => List.of(_pages);
+  @override
+  RouteInformation get currentConfiguration {
+    return RouteInformation(location: _location ?? '/');
+  }
 
   @override
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
-
-  @override
-  List<Page> get currentConfiguration => List.of(_pages);
 
   @override
   Widget build(BuildContext context) {
@@ -46,21 +80,24 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
         ));
   }
 
-  void pop(BuildContext context, {dynamic result}) async{
+  void pop() async {
     if (canPop()) {
       _pages.removeLast();
-      Navigator.of(context).pop(result);
     }
     notifyListeners();
   }
 
   @override
-  Future<void> setNewRoutePath(List<RouteSettings> configuration) {
-    return routePathCallBack == null
-        ? Future.value(null)
-        : routePathCallBack!.call(configuration, _pages);
+  Future<void> setNewRoutePath(RouteInformation configuration) async {
+    return popAndPushNamed(name: configuration.location ?? '/');
   }
 
+  // @override
+  // Future<void> setNewRoutePath(List<RouteSettings> configuration) {
+  //   return routePathCallBack == null
+  //       ? Future.value(null)
+  //       : routePathCallBack!.call(configuration, _pages);
+  // }
 
   @override
   Future<bool> popRoute() async {
@@ -73,10 +110,11 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
       notifyListeners();
       return Future.value(true);
     }
-    ///外部可仿照传入 styleCallBack定制推出样式
-    return styleCallBack == null
+
+    ///外部可仿照传入 exitStyleCallBack 定制推出样式
+    return exitStyleCallBack == null
         ? Future.value(false)
-        : styleCallBack!.call(navigatorKey.currentContext!);
+        : exitStyleCallBack!.call(navigatorKey.currentContext!);
   }
 
   /// 检测是否打开了 showModalBottomSheet 或 Dialog
@@ -86,7 +124,6 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     }
     return ModalRoute.of(context)?.isCurrent ?? false;
   }
-
 
   bool canPop() => _pages.length > 1;
 
@@ -115,7 +152,6 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     notifyListeners();
   }
 
-
   void replace({required Widget page, String? name, Object? arguments}) {
     if (_pages.isNotEmpty) {
       _pages.removeLast();
@@ -123,26 +159,76 @@ class RouterProxy extends RouterDelegate<List<RouteSettings>>
     push(page: page, name: name, arguments: arguments);
   }
 
+  void pushNamedAndRemove(
+      {required String name, Object? arguments, Widget? emptyPage}) {
+    if (_pages.isNotEmpty) {
+      _pages.clear();
+    }
+    pushNamed(name: name, arguments: arguments, emptyPage: emptyPage);
+  }
 
-/// 例子：
-///   Future<bool> _confirmExit(BuildContext context) async {
-///     final result = await showDialog<bool>(
-///         context: context,
-///         builder: (context) {
-///           return AlertDialog(
-///             content: const Text('确定要退出App吗?'),
-///             actions: [
-///               TextButton(
-///                 child: const Text('取消'),
-///                 onPressed: () => Navigator.pop(context, true),
-///               ),
-///               TextButton(
-///                 child: const Text('确定'),
-///                 onPressed: () => Navigator.pop(context, false),
-///               ),
-///             ],
-///           );
-///         });
-///     return result ?? true;
-///   }
+  void popAndPushNamed(
+      {required String name, Object? arguments, Widget? emptyPage}) {
+    if (_pages.isNotEmpty) {
+      _pages.removeLast();
+    }
+    pushNamed(name: name, arguments: arguments, emptyPage: emptyPage);
+  }
+
+  void pushNamed({required String name,
+    Object? arguments,
+    Widget? emptyPage,
+    bool custom = false
+  }) {
+    var page = pageMap?[name];
+    _location = name;
+    if (custom) {
+      page = routePathCallBack?.call(RouteInformation(location: _location));
+    }
+    if (page == null) {
+      _location = '404';
+      page = emptyPage ?? const EmptyPage();
+    }
+    push(page: page, name: name, arguments: arguments);
+  }
+
+
+  void goRootPage() {
+    _pages.clear();
+    _location = '/';
+    pushNamed(name: _location!);
+  }
+
+  List<Page> get pages => _pages;
+
+  String? getLocation() {
+    return _location;
+  }
+
+  set location(String value) {
+    _location = value;
+    popAndPushNamed(name:_location!);
+  }
+
+  /// exitStyleCallBack 例子：
+  ///   Future<bool> _confirmExit(BuildContext context) async {
+  ///     final result = await showDialog<bool>(
+  ///         context: context,
+  ///         builder: (context) {
+  ///           return AlertDialog(
+  ///             content: const Text('确定要退出App吗?'),
+  ///             actions: [
+  ///               TextButton(
+  ///                 child: const Text('取消'),
+  ///                 onPressed: () => Navigator.pop(context, true),
+  ///               ),
+  ///               TextButton(
+  ///                 child: const Text('确定'),
+  ///                 onPressed: () => Navigator.pop(context, false),
+  ///               ),
+  ///             ],
+  ///           );
+  ///         });
+  ///     return result ?? true;
+  ///   }
 }
