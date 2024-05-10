@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
-
 
 ///
 /// create_user: zhengzaihong
@@ -15,16 +15,21 @@ typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
 
 typedef ExitStyleCallBack = Future<bool> Function(BuildContext context);
 
+typedef NavigateToTargetCallBack = void Function(
+    BuildContext context, dynamic page);
+
 // class RouterProxy extends RouterDelegate<List<RouteSettings>> with ChangeNotifier, PopNavigatorRouterDelegateMixin<List<RouteSettings>> {
 
 class RouterProxy extends RouterDelegate<RouteInformation>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
-
   /// 可用于动态路由实现跳转
-  RoutePathCallBack? routePathCallBack;
+  RoutePathCallBack? _routePathCallBack;
 
   /// 移动端退出程序时自定义页面的回调
-  ExitStyleCallBack? exitStyleCallBack;
+  ExitStyleCallBack? _exitStyleCallBack;
+
+  /// 特定页面跳转(非实际跳转)的回调
+  NavigateToTargetCallBack? _navigateToTargetCallBack;
 
   /// 静态路由的页面
   Map? pageMap = {};
@@ -32,25 +37,45 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 当前路由的名称 用web浏览器中
   String? _location;
 
+  /// 通知特定的页面 ValueListenableBuilder
+  ValueNotifier<dynamic> targetPageNotifier = ValueNotifier(null);
+  Queue<dynamic> _targetPageQueue = Queue();
+  int _maxQueue = 30;
+  int _modificationCount = -1;
+
   /// 具体的页面集
-  final List<Page> _pages = [];
+  final List<MaterialPage> _pages = [];
 
   static final _navigatorKey = GlobalKey<NavigatorState>();
 
-  RouterProxy._({this.exitStyleCallBack, this.routePathCallBack, this.pageMap}) : super(){
+  RouterProxy._(
+      {ExitStyleCallBack? exitStyleCallBack,
+      RoutePathCallBack? routePathCallBack,
+      NavigateToTargetCallBack? navigateToTargetCallBack,
+      this.pageMap,
+      int maxQueue = 30,
+      })
+      : super() {
+    _exitStyleCallBack = exitStyleCallBack;
+    _routePathCallBack = routePathCallBack;
+    _navigateToTargetCallBack = navigateToTargetCallBack;
+    _maxQueue = maxQueue;
     pageMap?.forEach((key, value) {
       _pages.add(MaterialPage(child: value));
     });
   }
 
   static RouterProxy? _instance;
+
   static RouterProxy getInstance(
       {RoutePathCallBack? routePathCallBack,
       ExitStyleCallBack? exitStyleCallBack,
+      NavigateToTargetCallBack? navigateToTargetCallBack,
       Map? pageMap}) {
     _instance ??= RouterProxy._(
         routePathCallBack: routePathCallBack,
         exitStyleCallBack: exitStyleCallBack,
+        navigateToTargetCallBack: navigateToTargetCallBack,
         pageMap: pageMap);
     return _instance!;
   }
@@ -84,7 +109,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     if (canPop()) {
       _pages.removeLast();
     }
-    notifyListeners();
+    notify();
   }
 
   @override
@@ -107,14 +132,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     }
     if (canPop()) {
       _pages.removeLast();
-      notifyListeners();
+      notify();
       return Future.value(true);
     }
 
     ///外部可仿照传入 exitStyleCallBack 定制推出样式
-    return exitStyleCallBack == null
+    return _exitStyleCallBack == null
         ? Future.value(false)
-        : exitStyleCallBack!.call(navigatorKey.currentContext!);
+        : _exitStyleCallBack!.call(navigatorKey.currentContext!);
   }
 
   /// 检测是否打开了 showModalBottomSheet 或 Dialog
@@ -138,7 +163,11 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     return false;
   }
 
-  void push({required Widget page, String? name, Object? arguments}) {
+  void push(
+      {required Widget page,
+      String? name,
+      Object? arguments,
+      String? restorationId}) {
     var routeSettings = RouteSettings(
         name: name ?? page.runtimeType.toString(), arguments: arguments);
 
@@ -147,24 +176,47 @@ class RouterProxy extends RouterDelegate<RouteInformation>
         child: page,
         name: routeSettings.name,
         arguments: routeSettings.arguments,
-        restorationId: page.hashCode.toString()));
+        restorationId: restorationId));
 
-    notifyListeners();
+    notify();
   }
 
-  void replace({required Widget page, String? name, Object? arguments}) {
+  Widget getCurrentPage() {
+    return (_pages.last).child;
+  }
+
+  MaterialPage getCurrentMaterialPage() {
+    return (_pages.last);
+  }
+
+  void replace(
+      {required Widget page,
+      String? name,
+      Object? arguments,
+      String? restorationId}) {
     if (_pages.isNotEmpty) {
       _pages.removeLast();
     }
-    push(page: page, name: name, arguments: arguments);
+    push(
+        page: page,
+        name: name,
+        arguments: arguments,
+        restorationId: restorationId);
   }
 
   void pushNamedAndRemove(
-      {required String name, Object? arguments, Widget? emptyPage}) {
+      {required String name,
+      Object? arguments,
+      Widget? emptyPage,
+      String? restorationId}) {
     if (_pages.isNotEmpty) {
       _pages.clear();
     }
-    pushNamed(name: name, arguments: arguments, emptyPage: emptyPage);
+    pushNamed(
+        name: name,
+        arguments: arguments,
+        emptyPage: emptyPage,
+        restorationId: restorationId);
   }
 
   void popAndPushNamed(
@@ -175,23 +227,27 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     pushNamed(name: name, arguments: arguments, emptyPage: emptyPage);
   }
 
-  void pushNamed({required String name,
-    Object? arguments,
-    Widget? emptyPage,
-    bool custom = false
-  }) {
+  void pushNamed(
+      {required String name,
+      Object? arguments,
+      Widget? emptyPage,
+      bool custom = false,
+      String? restorationId}) {
     var page = pageMap?[name];
     _location = name;
     if (custom) {
-      page = routePathCallBack?.call(RouteInformation(location: _location));
+      page = _routePathCallBack?.call(RouteInformation(location: _location));
     }
     if (page == null) {
       _location = '404';
       page = emptyPage ?? const EmptyPage();
     }
-    push(page: page, name: name, arguments: arguments);
+    push(
+        page: page,
+        name: name,
+        arguments: arguments,
+        restorationId: restorationId);
   }
-
 
   void goRootPage() {
     _pages.clear();
@@ -199,7 +255,12 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     pushNamed(name: _location!);
   }
 
-  List<Page> get pages => _pages;
+  void pushAndRemoveUntil(Widget page) {
+    pages.clear();
+    push(page: page);
+  }
+
+  List<MaterialPage> get pages => _pages;
 
   String? getLocation() {
     return _location;
@@ -207,8 +268,51 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   set location(String value) {
     _location = value;
-    popAndPushNamed(name:_location!);
+    popAndPushNamed(name: _location!);
   }
+
+  void notify() {
+    notifyListeners();
+  }
+
+  /// 非页面跳转，只切换到目标页面 外部需要自行状态管理
+  void goToTarget(Widget page) {
+    _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
+    _targetPageQueue.add(page);
+    if(_targetPageQueue.length>_maxQueue){
+      _targetPageQueue.removeFirst();
+    }
+    _modificationCount++;
+  }
+
+  void backTarget() {
+    _modificationCount = _modificationCount-1;
+    if (_modificationCount < 0) {
+      _modificationCount = -1;
+      _navigateToTargetCallBack?.call(navigatorKey.currentContext!,null);
+      return;
+    }
+    if (_modificationCount >= _targetPageQueue.length) {
+      _modificationCount = _targetPageQueue.length - 1;
+    }
+    _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
+        _targetPageQueue.elementAt(_modificationCount));
+  }
+
+  void nextTarget() {
+    _modificationCount = _modificationCount+1;
+    if (_modificationCount >= _targetPageQueue.length) {
+      _modificationCount = _targetPageQueue.length - 1;
+      return;
+    }
+    _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
+        _targetPageQueue.elementAt(_modificationCount));
+  }
+  void clearTargets() {
+    _modificationCount = -1;
+    _targetPageQueue.clear();
+  }
+
 
   /// exitStyleCallBack 例子：
   ///   Future<bool> _confirmExit(BuildContext context) async {

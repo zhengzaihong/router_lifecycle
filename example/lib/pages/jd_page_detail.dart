@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
+import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 class JdPageDetail extends StatelessWidget {
@@ -28,8 +29,9 @@ class JdPageDetail extends StatelessWidget {
       appBar: AppBar(
         leading: GestureDetector(
           onTap: (){
-            // router.pop(context);
-            router.pushNamed(name: 'TaoBaoPageDetail1',custom: true);
+            router.pop();
+            // print(router.getCurrentPage().runtimeType.toString());
+            // print(router.getCurrentMaterialPage().arguments);
           },
           child: const Icon(Icons.arrow_back_ios,size: 30,color: Colors.red),
         ),
@@ -38,17 +40,26 @@ class JdPageDetail extends StatelessWidget {
         children:  [
           Expanded(child:   Center(child:  GestureDetector(
             onTap: (){
-              showDialog(context: context,
-                  builder: (context){
-                    return AlertDialog(
-                      content:  Container(
-                        height: 400,
-                        child: const Text('aaaaaaaaaaaaaaaaaaaaaaa'),
-                      ),
-                    );
-                  });
+              // showDialog(context: context,
+              //     builder: (context){
+              //       return AlertDialog(
+              //         content:  Container(
+              //           height: 400,
+              //           child: const Text('aaaaaaaaaaaaaaaaaaaaaaa'),
+              //         ),
+              //       );
+              //     });
+
+              // router.pushAndRemoveUntil(Login());
+              router.goToTarget(Login());
+
             },
-            child:  const Text("京东详情页面"),
+            child: ValueListenableBuilder(
+              valueListenable: router.targetPageNotifier,
+              builder: (context, value, child) {
+                return  Text("京东详情页面 ${value}");
+              },
+            ),
           ),))
         ],
       ),

@@ -32,8 +32,10 @@ class TaoBaoPage extends StatelessWidget {
             child: Center(
               child: GestureDetector(
                 onTap: () {
-                  var page = TaoBaoPageDetail();
-                  router.push(page: page);
+                  router.pushNamed(name: 'TaoBaoPageDetail1',custom: true);
+
+                  // var page = TaoBaoPageDetail();
+                  // router.push(page: page);
                 },
                 child: const Text("淘宝页面"),
               ),

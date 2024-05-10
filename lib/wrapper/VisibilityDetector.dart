@@ -382,8 +382,7 @@ class VisibilityDetectorLayer extends ContainerLayer {
 
   /// Computes the accumulated clipping bounds, in global coordinates.
   Rect _computeClipRect() {
-    assert(RendererBinding.instance?.renderView != null);
-    var clipRect = Offset.zero & RendererBinding.instance!.renderView.size;
+    var clipRect = Offset.zero & RendererBinding.instance.renderView.size;
 
     var parentLayer = parent;
     while (parentLayer != null) {
@@ -426,7 +425,7 @@ class VisibilityDetectorLayer extends ContainerLayer {
       if (isFirstUpdate) {
         // We're about to render a frame, so a post-frame callback is guaranteed
         // to fire and will give us the better immediacy than `scheduleTask<T>`.
-        SchedulerBinding.instance!.addPostFrameCallback((timeStamp) {
+        SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
           _processCallbacks();
         });
       }
@@ -449,7 +448,7 @@ class VisibilityDetectorLayer extends ContainerLayer {
     // of `addPostFrameCallback` or `scheduleFrameCallback` so that work will
     // be done even if a new frame isn't scheduled and without unnecessarily
     // scheduling a new frame.
-    SchedulerBinding.instance!
+    SchedulerBinding.instance
         .scheduleTask<void>(_processCallbacks, Priority.touch);
   }
 
