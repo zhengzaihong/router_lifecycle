@@ -276,13 +276,15 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 非页面跳转，只切换到目标页面 外部需要自行状态管理
-  void goToTarget(Widget page) {
+  void goToTarget(Widget page,{bool insert = true}) {
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
-    _targetPageQueue.add(page);
+    if(insert){
+      _targetPageQueue.add(page);
+      _modificationCount++;
+    }
     if(_targetPageQueue.length>_maxQueue){
       _targetPageQueue.removeFirst();
     }
-    _modificationCount++;
   }
 
   void backTarget() {
