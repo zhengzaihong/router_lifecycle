@@ -41,7 +41,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   ValueNotifier<dynamic> targetPageNotifier = ValueNotifier(null);
   Queue<dynamic> _targetPageQueue = Queue();
   int _maxQueue = 30;
-  int _modificationCount = -1;
+  int _modificationCount = 0;
 
   /// 具体的页面集
   final List<MaterialPage> _pages = [];
@@ -50,10 +50,10 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   RouterProxy._(
       {ExitStyleCallBack? exitStyleCallBack,
-      RoutePathCallBack? routePathCallBack,
-      NavigateToTargetCallBack? navigateToTargetCallBack,
-      this.pageMap,
-      int maxQueue = 30,
+        RoutePathCallBack? routePathCallBack,
+        NavigateToTargetCallBack? navigateToTargetCallBack,
+        this.pageMap,
+        int maxQueue = 30,
       })
       : super() {
     _exitStyleCallBack = exitStyleCallBack;
@@ -69,9 +69,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   static RouterProxy getInstance(
       {RoutePathCallBack? routePathCallBack,
-      ExitStyleCallBack? exitStyleCallBack,
-      NavigateToTargetCallBack? navigateToTargetCallBack,
-      Map? pageMap}) {
+        ExitStyleCallBack? exitStyleCallBack,
+        NavigateToTargetCallBack? navigateToTargetCallBack,
+        Map? pageMap}) {
     _instance ??= RouterProxy._(
         routePathCallBack: routePathCallBack,
         exitStyleCallBack: exitStyleCallBack,
@@ -165,9 +165,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   void push(
       {required Widget page,
-      String? name,
-      Object? arguments,
-      String? restorationId}) {
+        String? name,
+        Object? arguments,
+        String? restorationId}) {
     var routeSettings = RouteSettings(
         name: name ?? page.runtimeType.toString(), arguments: arguments);
 
@@ -191,9 +191,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   void replace(
       {required Widget page,
-      String? name,
-      Object? arguments,
-      String? restorationId}) {
+        String? name,
+        Object? arguments,
+        String? restorationId}) {
     if (_pages.isNotEmpty) {
       _pages.removeLast();
     }
@@ -206,9 +206,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   void pushNamedAndRemove(
       {required String name,
-      Object? arguments,
-      Widget? emptyPage,
-      String? restorationId}) {
+        Object? arguments,
+        Widget? emptyPage,
+        String? restorationId}) {
     if (_pages.isNotEmpty) {
       _pages.clear();
     }
@@ -229,10 +229,10 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   void pushNamed(
       {required String name,
-      Object? arguments,
-      Widget? emptyPage,
-      bool custom = false,
-      String? restorationId}) {
+        Object? arguments,
+        Widget? emptyPage,
+        bool custom = false,
+        String? restorationId}) {
     var page = pageMap?[name];
     _location = name;
     if (custom) {
@@ -289,8 +289,8 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   void backTarget() {
     _modificationCount = _modificationCount-1;
-    if (_modificationCount < 0) {
-      _modificationCount = -1;
+    if (_modificationCount <= 0) {
+      _modificationCount = 0;
       _navigateToTargetCallBack?.call(navigatorKey.currentContext!,null);
       return;
     }
@@ -305,36 +305,35 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     _modificationCount = _modificationCount+1;
     if (_modificationCount >= _targetPageQueue.length) {
       _modificationCount = _targetPageQueue.length - 1;
-      return;
     }
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
         _targetPageQueue.elementAt(_modificationCount));
   }
   void clearTargets() {
-    _modificationCount = -1;
+    _modificationCount = 0;
     _targetPageQueue.clear();
   }
 
 
-  /// exitStyleCallBack 例子：
-  ///   Future<bool> _confirmExit(BuildContext context) async {
-  ///     final result = await showDialog<bool>(
-  ///         context: context,
-  ///         builder: (context) {
-  ///           return AlertDialog(
-  ///             content: const Text('确定要退出App吗?'),
-  ///             actions: [
-  ///               TextButton(
-  ///                 child: const Text('取消'),
-  ///                 onPressed: () => Navigator.pop(context, true),
-  ///               ),
-  ///               TextButton(
-  ///                 child: const Text('确定'),
-  ///                 onPressed: () => Navigator.pop(context, false),
-  ///               ),
-  ///             ],
-  ///           );
-  ///         });
-  ///     return result ?? true;
-  ///   }
+/// exitStyleCallBack 例子：
+///   Future<bool> _confirmExit(BuildContext context) async {
+///     final result = await showDialog<bool>(
+///         context: context,
+///         builder: (context) {
+///           return AlertDialog(
+///             content: const Text('确定要退出App吗?'),
+///             actions: [
+///               TextButton(
+///                 child: const Text('取消'),
+///                 onPressed: () => Navigator.pop(context, true),
+///               ),
+///               TextButton(
+///                 child: const Text('确定'),
+///                 onPressed: () => Navigator.pop(context, false),
+///               ),
+///             ],
+///           );
+///         });
+///     return result ?? true;
+///   }
 }
