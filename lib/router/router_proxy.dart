@@ -280,7 +280,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
     if(insert){
       _targetPageQueue.add(page);
-      _modificationCount++;
+      _modificationCount = _targetPageQueue.length-1;
     }
     if(_targetPageQueue.length>_maxQueue){
       _targetPageQueue.removeFirst();
@@ -289,12 +289,12 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   void backTarget() {
     _modificationCount = _modificationCount-1;
-    if (_modificationCount <= 0) {
+    if (_modificationCount < 0) {
       _modificationCount = 0;
       _navigateToTargetCallBack?.call(navigatorKey.currentContext!,null);
       return;
     }
-    if (_modificationCount >= _targetPageQueue.length) {
+    if (_modificationCount == _targetPageQueue.length) {
       _modificationCount = _targetPageQueue.length - 1;
     }
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
@@ -302,13 +302,15 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   void nextTarget() {
+
     _modificationCount = _modificationCount+1;
-    if (_modificationCount >= _targetPageQueue.length) {
-      _modificationCount = _targetPageQueue.length - 1;
+    if (_modificationCount == _targetPageQueue.length) {
+      _modificationCount = _targetPageQueue.length-1;
     }
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
         _targetPageQueue.elementAt(_modificationCount));
   }
+
   void clearTargets() {
     _modificationCount = 0;
     _targetPageQueue.clear();
