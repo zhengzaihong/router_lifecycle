@@ -280,7 +280,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
     if(insert){
       _targetPageQueue.add(page);
-      _modificationCount = _targetPageQueue.length-1;
+      _modificationCount++;
     }
     if(_targetPageQueue.length>_maxQueue){
       _targetPageQueue.removeFirst();
