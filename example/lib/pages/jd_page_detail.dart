@@ -55,7 +55,7 @@ class JdPageDetail extends StatelessWidget {
 
             },
             child: ValueListenableBuilder(
-              valueListenable: router.targetPageNotifier,
+              valueListenable: router.currentTargetPage,
               builder: (context, value, child) {
                 return  Text("京东详情页面 ${value}");
               },

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_router_forzzh/router_lib.dart';
 
@@ -38,10 +37,11 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   String? _location;
 
   /// 通知特定的页面 ValueListenableBuilder
-  ValueNotifier<dynamic> targetPageNotifier = ValueNotifier(null);
-  Queue<dynamic> _targetPageQueue = Queue();
+  ValueNotifier<dynamic> currentTargetPage = ValueNotifier(null);
+
+
+  final List<dynamic> _targetPageQueue = [];
   int _maxQueue = 30;
-  int _modificationCount = 0;
 
   /// 具体的页面集
   final List<MaterialPage> _pages = [];
@@ -280,39 +280,24 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
     if(insert){
       _targetPageQueue.add(page);
-      _modificationCount++;
     }
     if(_targetPageQueue.length>_maxQueue){
-      _targetPageQueue.removeFirst();
+      _targetPageQueue.removeAt(0);
     }
   }
+
 
   void backTarget() {
-    _modificationCount = _modificationCount-1;
-    if (_modificationCount < 0) {
-      _modificationCount = 0;
+    ///规避没有页面的情况
+    try {
+      _targetPageQueue.removeLast();
+      _navigateToTargetCallBack?.call(navigatorKey.currentContext!, _targetPageQueue.removeLast());
+    }catch(e){
       _navigateToTargetCallBack?.call(navigatorKey.currentContext!,null);
-      return;
     }
-    if (_modificationCount == _targetPageQueue.length) {
-      _modificationCount = _targetPageQueue.length - 1;
-    }
-    _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
-        _targetPageQueue.elementAt(_modificationCount));
-  }
-
-  void nextTarget() {
-
-    _modificationCount = _modificationCount+1;
-    if (_modificationCount == _targetPageQueue.length) {
-      _modificationCount = _targetPageQueue.length-1;
-    }
-    _navigateToTargetCallBack?.call(navigatorKey.currentContext!,
-        _targetPageQueue.elementAt(_modificationCount));
   }
 
   void clearTargets() {
-    _modificationCount = 0;
     _targetPageQueue.clear();
   }
 

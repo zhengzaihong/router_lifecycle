@@ -19,7 +19,7 @@ RouterProxy router = RouterProxy.getInstance(
     },
     navigateToTargetCallBack: (context,page){
       print("----------page:${page.runtimeType}");
-      router.targetPageNotifier.value = Random().nextInt(100);
+      router.currentTargetPage.value = Random().nextInt(100);
     },
     pageMap: {
       '/': const Login(),
