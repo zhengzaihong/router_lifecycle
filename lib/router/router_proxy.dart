@@ -14,13 +14,11 @@ typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
 
 typedef ExitStyleCallBack = Future<bool> Function(BuildContext context);
 
-typedef NavigateToTargetCallBack = void Function(
-    BuildContext context, dynamic page);
+typedef NavigateToTargetCallBack = void Function(BuildContext context, Widget? page);
 
 // class RouterProxy extends RouterDelegate<List<RouteSettings>> with ChangeNotifier, PopNavigatorRouterDelegateMixin<List<RouteSettings>> {
 
-class RouterProxy extends RouterDelegate<RouteInformation>
-    with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
+class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
   /// 可用于动态路由实现跳转
   RoutePathCallBack? _routePathCallBack;
 
@@ -37,7 +35,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   String? _location;
 
   /// 通知特定的页面 ValueListenableBuilder
-  ValueNotifier<dynamic> currentTargetPage = ValueNotifier(null);
+  ValueNotifier<Widget?> currentTargetPage = ValueNotifier(null);
 
 
   final List<dynamic> _targetPageQueue = [];
@@ -260,6 +258,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     push(page: page);
   }
 
+  //栈顶跳转
+  void pushStackTop({required Widget page}) {
+    if (_pages.isNotEmpty) {
+      _pages.removeWhere((element) => element.child.runtimeType == page.runtimeType);
+    }
+    push(page: page);
+  }
+
   List<MaterialPage> get pages => _pages;
 
   String? getLocation() {
@@ -276,7 +282,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 非页面跳转，只切换到目标页面 外部需要自行状态管理
-  void goToTarget(Widget page,{bool insert = true}) {
+  void goToTarget(Widget page,{bool insert = false}) {
     _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
     if(insert){
       _targetPageQueue.add(page);

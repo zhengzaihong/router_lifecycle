@@ -18,8 +18,8 @@ RouterProxy router = RouterProxy.getInstance(
       }
     },
     navigateToTargetCallBack: (context,page){
-      print("----------page:${page.runtimeType}");
-      router.currentTargetPage.value = Random().nextInt(100);
+      print("----------page:${page.hashCode}");
+      router.currentTargetPage.value = page;
     },
     pageMap: {
       '/': const Login(),

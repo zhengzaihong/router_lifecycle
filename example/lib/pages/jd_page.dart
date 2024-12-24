@@ -20,13 +20,19 @@ class JdPage extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: Center(
-                child: GestureDetector(
-                  onTap: () {
-                    router.push(page: JdPageDetail());
-                  },
-                  child: const Text("京东页面"),
-                )),
+            child: ValueListenableBuilder<Widget?>(
+              valueListenable: router.currentTargetPage,
+              builder: (context, value, child) {
+                print("----------value:${value.hashCode}");
+                return value ?? Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        router.push(page: JdPageDetail());
+                      },
+                      child: const Text("京东页面"),
+                    ));
+              },
+            ),
           )
         ],
       ),

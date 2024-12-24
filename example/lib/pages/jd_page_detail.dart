@@ -50,8 +50,7 @@ class JdPageDetail extends StatelessWidget {
               //       );
               //     });
 
-              // router.pushAndRemoveUntil(Login());
-              router.goToTarget(Login());
+              router.pushAndRemoveUntil(Login());
 
             },
             child: ValueListenableBuilder(
