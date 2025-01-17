@@ -10,7 +10,7 @@
 
 # pubspec.yaml 依赖
     dependencies:
-      flutter_router_forzzh: ^0.0.5
+      flutter_router_forzzh: ^0.0.6
 
 #### 导包 import 'package:flutter_router_forzzh/router_lib.dart';
 

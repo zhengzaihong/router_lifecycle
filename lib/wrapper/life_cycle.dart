@@ -23,10 +23,10 @@ class LifeCycle extends StatefulWidget {
   /// 子组件
   final Widget child;
 
-  /// 开始创建widget时回调方法
+  /// 开始创建widget时回调方法 ，可能还不可见
   final VoidCallback? onCreate;
 
-  /// 创建widget完成时回调方法，可能还不可见
+  /// 创建widget完成时回调方法
   final VoidCallback? onStart;
 
   /// 得到焦点可见状态
