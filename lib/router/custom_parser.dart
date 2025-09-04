@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:flutter_router_forzzh/router/route_parser.dart';
+import 'package:router_plus/router/route_parser.dart';
 
 ///
 /// create_user: zhengzaihong
@@ -12,18 +12,6 @@ import 'package:flutter_router_forzzh/router/route_parser.dart';
 class CustomParser extends RouteParser {
 
   const CustomParser() : super();
-  //
-  // @override
-  // Future<List<RouteSettings>> parseRouteInformation(RouteInformation routeInformation) {
-  //   return Future.value(List.empty());
-  // }
-  //
-  // @override
-  // RouteInformation restoreRouteInformation(List<RouteSettings> configuration) {
-  //   final location = configuration.last.name;
-  //
-  //   return RouteInformation(location: location);
-  // }
 
   @override
   Future<RouteInformation> parseRouteInformation(RouteInformation routeInformation) async {

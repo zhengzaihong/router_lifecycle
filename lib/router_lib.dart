@@ -1,4 +1,4 @@
-library flutter_router_forzzh;
+library router_plus;
 
 export 'router/route_parser.dart';
 export 'router/router_proxy.dart';

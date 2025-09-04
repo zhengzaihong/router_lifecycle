@@ -1,35 +1,20 @@
-
-
-
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_router_forzzh/router_lib.dart';
-import 'package:router_lifecycle_example/pages/jd_page_detail.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
-import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
+import 'package:router_plus/router/router_proxy.dart';
 
 RouterProxy router = RouterProxy.getInstance(
-    routePathCallBack: (routeInformation) {
-      print('routeInformation.location:${routeInformation.location}');
-      ///自定义的动态路由 跳转
-      if (routeInformation.location == 'TaoBaoPageDetail1') {
-        return JdPageDetail();
-      }
-    },
-    navigateToTargetCallBack: (context,page){
-      print("----------page:${page.hashCode}");
-      router.currentTargetPage.value = page;
-    },
-    pageMap: {
-      '/': const Login(),
-      'TaoBaoPageDetail':  TaoBaoPageDetail(),
-      // 'JdPageDetail':  JdPageDetail(),
-    },
-    exitStyleCallBack: (context){
-    return _confirmExit(context);
-  }
-);
+    // routePathCallBack: (routeInformation) {
+    //   print('routeInformation.location:${routeInformation.uri}');
+    //   //自定义的动态路由 跳转
+    //   if (routeInformation.uri.toString() == 'TaoBaoPageDetail1') {
+    //     return JdPageDetail();
+    //   }
+    // },
+    // navigateToTargetCallBack: (context,page){
+    //   router.currentTargetPage.value = page;
+    // },
+    pageMap: {'/': const Login()},
+    exitWindowStyle: _confirmExit);
 
 Future<bool> _confirmExit(BuildContext context) async {
   final result = await showDialog<bool>(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_router_forzzh/router_lib.dart';
+import 'package:router_plus/router_lib.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
 
 class TaoBaoPageDetail extends StatefulWidget {
@@ -14,8 +14,11 @@ class _TaoBaoPageDetailState extends State<TaoBaoPageDetail>{
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-        onWillPop: onWillPop,
+    return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop){
+          router.pop();
+        },
         child: LifeCycle(
         onResume: (){
           setState(() {
@@ -55,15 +58,5 @@ class _TaoBaoPageDetailState extends State<TaoBaoPageDetail>{
             )))],
           ),
         )));
-  }
-
-
-
-  Future<bool> onWillPop() {
-    if(router.isShowingModalBottomSheet(context)){
-      router.pop();
-      return Future.value(false);
-    }
-    return Future.value(true);
   }
 }

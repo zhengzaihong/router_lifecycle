@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 /// describe: 路由解析
 ///
 abstract class RouteParser extends RouteInformationParser<RouteInformation> {
-// abstract class RouteParser extends RouteInformationParser<List<RouteSettings>> {
 
   const RouteParser() : super();
 

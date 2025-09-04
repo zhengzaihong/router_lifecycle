@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:flutter_router_forzzh/router/router_proxy.dart';
+import 'package:router_plus/router/router_proxy.dart';
 
 ///
 /// create_user: zhengzaihong

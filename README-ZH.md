@@ -13,7 +13,7 @@ Language: [English](README.md) | 简体中文
 
 # pubspec.yaml 依赖
     dependencies:
-      router_plus: ^0.0.6
+      router_plus: ^0.1.0 // 原flutter_router_forzzh：0.0.6（最后版本依赖地址，停止更新）
 
 #### 导包 import 'package:router_plus/router_lib.dart';
 

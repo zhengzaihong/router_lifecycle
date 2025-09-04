@@ -18,7 +18,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  flutter_router_forzzh:
+  router_plus:
     # When depending on this package from a real application you should use:
     #   router_lifecycle: ^x.y.z
     # See https://dart.dev/tools/pub/dependencies#version-constraints

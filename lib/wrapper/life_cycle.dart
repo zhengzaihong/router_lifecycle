@@ -47,6 +47,8 @@ class LifeCycle extends StatefulWidget {
 
 class _LifeCycleState extends State<LifeCycle>
     with WidgetsBindingObserver {
+
+  bool _isExit = false;
   final _visibilityDetectorKey = UniqueKey();
 
   /// 当前组件在app 里可见
@@ -114,17 +116,19 @@ class _LifeCycleState extends State<LifeCycle>
     }
 
     final isFullyInvisible = newVisibleFraction == 0;
-    if (wasFullyVisible && isFullyInvisible) {
+    if (wasFullyVisible && isFullyInvisible && !_isExit) {
       _isWidgetVisible = false;
       widget.onPause?.call();
-      if(!mounted){
-        widget.onDestroy?.call();
-      }
     }
   }
 
   @override
   void dispose() {
+    if (_isWidgetVisible) {
+      _isExit = true;
+      widget.onPause?.call();
+    }
+    widget.onDestroy?.call();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

@@ -1,4 +1,6 @@
-# Let Widgets Have Lifecycle
+# Routing tools and sensing Widget declaration cycles
+
+Language: English | [简体中文](README-ZH.md)
 
 ### Preface:
 
@@ -19,7 +21,7 @@ separated and decoupled, so you can use them independently.
 # pubspec.yaml Dependency
 
     dependencies:
-      router_plus: ^0.0.6
+      router_plus: ^0.0.6 //Original flutter_router_forzzh: 0.0.6 (the last version depends on the address, stop updating)
 
 #### Import package: import 'package:router_plus/router_lib.dart';
 

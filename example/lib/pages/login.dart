@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:flutter_router_forzzh/router_lib.dart';
+import 'package:router_plus/router_lib.dart';
 import 'package:router_lifecycle_example/pages/nav_page.dart';
 import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
 import 'package:router_lifecycle_example/router_helper.dart';
@@ -45,7 +45,6 @@ import 'package:router_lifecycle_example/router_helper.dart';
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            primary: Theme.of(context).primaryColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4.0),
                             ),
@@ -58,7 +57,7 @@ import 'package:router_lifecycle_example/router_helper.dart';
                           },
                           child: const Text(
                             '注册',
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(color: Colors.black),
                           ),
                         ),
                         const SizedBox(
@@ -66,7 +65,6 @@ import 'package:router_lifecycle_example/router_helper.dart';
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            primary: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4.0),
                             ),
