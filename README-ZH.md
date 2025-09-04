@@ -1,38 +1,32 @@
-# Let Widgets Have Lifecycle
+# 路由工具和感知Widget声明周期
 
-### Preface:
+Language: [English](README.md) | 简体中文
 
-In Flutter development, there are many cases where you want your page to
-have lifecycle features like Android's Activity/Fragment, such as lazy
-loading to improve performance and user experience. However, in Flutter,
-StatelessWidget and StatefulWidget do not natively support detecting
-whether a page is running in the foreground, background, or being
-destroyed. Although StatefulWidget provides the dispose() callback when
-destroyed, checking foreground/background status becomes difficult,
-especially for pages built with StatelessWidget.
 
-This utility library allows both StatelessWidget and StatefulWidget to
-quickly gain lifecycle features similar to Android's Activity/Fragment:
-onResume, onPause, onDestroy. The routing tool and lifecycle feature are
-separated and decoupled, so you can use them independently.
+###前言：
+ 在Flutter开发中很多时候需要你的页面像安卓中的Activity/Fragment具备生命周期的特性做懒加载来提升部分性能和体验，然而在
+ flutter中StatelessWidget、StatefulWidget中并不具备检测页面是否运行在前台、后台、和销毁。尽管StatefulWidget中
+ 有销毁时的 dispose() 回调，但对于检查前后台，StatelessWidget做页面时将变得力不从心....
 
-# pubspec.yaml Dependency
+ 此工具库可快速让StatelessWidget、StatefulWidget具备Android中Activity/Fragment的 onResume、onPause、onDestroy的生命周期。
+ 此库已将原来页面跳转工具和生命周期功能独立拆开，不再耦合。可分别使用。
 
+# pubspec.yaml 依赖
     dependencies:
       router_plus: ^0.0.6
 
-#### Import package: import 'package:router_plus/router_lib.dart';
+#### 导包 import 'package:router_plus/router_lib.dart';
 
-# Feature 1:
+# 功能1：
 
-#### 1. Routing functionality for page navigation.
+#### 1.路由功能实现界面跳转。
 
-##### Define router globally for convenience:
+##### 顶层定义router方便全局使用。
 
       RouterProxy router = RouterProxy.getInstance(
           // routePathCallBack: (routeInformation) {
           //   print('routeInformation.location:${routeInformation.uri}');
-          //   // Custom dynamic routing
+          //   //自定义的动态路由 跳转
           //   if (routeInformation.uri.toString() == 'TaoBaoPageDetail1') {
           //     return JdPageDetail();
           //   }
@@ -49,14 +43,14 @@ separated and decoupled, so you can use them independently.
             context: context,
             builder: (context) {
               return AlertDialog(
-                content: const Text('Are you sure you want to exit the App?'),
+                content: const Text('确定要退出App吗?'),
                 actions: [
                   TextButton(
-                    child: const Text('Cancel'),
+                    child: const Text('取消'),
                     onPressed: () => Navigator.pop(context, true),
                   ),
                   TextButton(
-                    child: const Text('Confirm'),
+                    child: const Text('确定'),
                     onPressed: () => Navigator.pop(context, false),
                   ),
                 ],
@@ -65,39 +59,42 @@ separated and decoupled, so you can use them independently.
         return result ?? true;
       }
 
-##### 2. Register RouterProxy in MaterialApp.router
+
+##### 2.MaterialApp.router 注册RouterProxy
 
     void main() {
-      runApp(MyApp());
-    }
+   	  runApp(MyApp());
+   	}
+   	
+   	class MyApp extends StatelessWidget {
+   	  MyApp({Key? key}) : super(key: key)
+   	  @override
+   	  Widget build(BuildContext context) {
+   		return MaterialApp.router(
+   		  title: 'router_lifecycle',
+   		  debugShowCheckedModeBanner: false,
+   		  routerDelegate: router, //绑定路由跳转工具
+   		  routeInformationParser: router.defaultParser(),//路由解析器,可自定义传入
+   		);
+   	  }
+   	}
 
-    class MyApp extends StatelessWidget {
-      MyApp({Key? key}) : super(key: key)
-      @override
-      Widget build(BuildContext context) {
-        return MaterialApp.router(
-          title: 'router_lifecycle',
-          debugShowCheckedModeBanner: false,
-          routerDelegate: router, // Bind routing tool
-          routeInformationParser: router.defaultParser(), // Route parser, customizable
-        );
-      }
-    }
+
+    1 页面的跳转使用 router.push(); router.pushNamed()等
+    
+    2 页面的关闭使用 router.pop();
 
 
-    1. Use router.push(), router.pushNamed() etc. for page navigation.
 
-    2. Use router.pop() to close a page.
+# 功能2：
 
-# Feature 2:
+#### 2.对需要监听生命周期的页面做任务。
 
-#### 2. Add lifecycle listeners to pages where needed.
+#####2.1 StatefulWidget页面：
 
-##### 2.1 StatefulWidget page:
+#####2.2 StatelessWidget页面：
 
-##### 2.2 StatelessWidget page:
-
-    class Login extends StatelessWidget {
+	class Login extends StatelessWidget {
     const Login({Key? key}) : super(key: key);
     @override
     Widget build(BuildContext context) {
@@ -127,7 +124,7 @@ separated and decoupled, so you can use them independently.
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
+  
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -145,7 +142,7 @@ separated and decoupled, so you can use them independently.
                           ),
                           onPressed: () {},
                           child: const Text(
-                            'Register',
+                            '注册',
                             style: TextStyle(color: Colors.white),
                           ),
                         ),
@@ -163,7 +160,7 @@ separated and decoupled, so you can use them independently.
                           onPressed: () {
                             router.push(page: NavPage());
                           },
-                          child: const Text('Login', style: TextStyle(color: Colors.black),),
+                          child: const Text('登录', style: TextStyle(color: Colors.black),),
                         ),
                         const SizedBox(
                           width: 16,
@@ -178,14 +175,14 @@ separated and decoupled, so you can use them independently.
       ));
     }}
 
-Other:
 
-1.  exitWindowStyle: allows customizing the exit confirmation dialog.
+其他：
 
-2.  For web support, if you need browser direct navigation to a page,
-    you need to customize routeInformationParser and extend the
-    RouteParser class.
+ 1.exitWindowStyle:可自定义退出程序提示框
 
-Effect:
+ 2.web端需要支持浏览器直接跳转访问某页面需要自定义routeInformationParser并继承 RouteParser类做解析器
+
+
+效果如下：
 
 ![](https://github.com/zhengzaihong/router_lifecycle/blob/master/images/GIF.gif)
