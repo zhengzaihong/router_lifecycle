@@ -147,13 +147,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
-  router_plus:
+  router_pro:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.1.0"
   sky_engine:
     dependency: transitive
     description: flutter

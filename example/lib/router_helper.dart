@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
-import 'package:router_plus/router/router_proxy.dart';
+import 'package:router_pro/router/router_proxy.dart';
 
 RouterProxy router = RouterProxy.getInstance(
     // routePathCallBack: (routeInformation) {

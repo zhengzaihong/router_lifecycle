@@ -1,4 +1,4 @@
-library router_plus;
+library router_pro;
 
 export 'router/route_parser.dart';
 export 'router/router_proxy.dart';

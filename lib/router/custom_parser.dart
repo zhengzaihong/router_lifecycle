@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:router_plus/router/route_parser.dart';
+import 'package:router_pro/router/route_parser.dart';
 
 ///
 /// create_user: zhengzaihong
