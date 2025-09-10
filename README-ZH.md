@@ -1,188 +1,178 @@
-# 路由工具和感知Widget声明周期
+# 🚀 Router Pro · 路由 & 生命周期感知工具
 
-Language: [English](README.md) | 简体中文
+[![pub package](https://img.shields.io/pub/v/router_pro.svg)](https://pub.dev/packages/router_pro)
+[![GitHub stars](https://img.shields.io/github/stars/zhengzaihong/router_lifecycle.svg?style=social)](https://github.com/zhengzaihong/router_lifecycle)
+[![license](https://img.shields.io/github/license/zhengzaihong/router_lifecycle)](LICENSE)
 
+[English](README.md) | 简体中文
 
-###前言：
- 在Flutter开发中很多时候需要你的页面像安卓中的Activity/Fragment具备生命周期的特性做懒加载来提升部分性能和体验，然而在
- flutter中StatelessWidget、StatefulWidget中并不具备检测页面是否运行在前台、后台、和销毁。尽管StatefulWidget中
- 有销毁时的 dispose() 回调，但对于检查前后台，StatelessWidget做页面时将变得力不从心....
+---
 
- 此工具库可快速让StatelessWidget、StatefulWidget具备Android中Activity/Fragment的 onResume、onPause、onDestroy的生命周期。
- 此库已将原来页面跳转工具和生命周期功能独立拆开，不再耦合。可分别使用。
+## ✨ 为什么选择 Router Pro?
 
-# pubspec.yaml 依赖
-    dependencies:
-      router_pro: ^0.1.0 // 原flutter_router_forzzh：0.0.6（最后版本依赖地址，停止更新）
+在 Flutter 开发中，页面往往需要像 Android 的 **Activity/Fragment** 一样具备生命周期能力（`onResume`、`onPause`、`onDestroy`），用于懒加载或提升性能体验。  
+但 Flutter 的 **StatelessWidget/StatefulWidget** 并不原生支持这些特性。
 
-#### 导包 import 'package:router_pro/router_lib.dart';
+**Router Pro 提供了解决方案：**
 
-# 功能1：
+- 🔗 **路由代理**：更轻松的页面跳转与回退  
+- ⏱ **生命周期感知**：Stateless/StatefulWidget 秒变 Activity/Fragment  
+- 🪶 **解耦设计**：路由与生命周期独立使用  
+- 🌍 **跨平台支持**：App & Web
 
-#### 1.路由功能实现界面跳转。
+---
 
-##### 顶层定义router方便全局使用。
+## 🌟 特点总结
 
-      RouterProxy router = RouterProxy.getInstance(
-          // routePathCallBack: (routeInformation) {
-          //   print('routeInformation.location:${routeInformation.uri}');
-          //   //自定义的动态路由 跳转
-          //   if (routeInformation.uri.toString() == 'TaoBaoPageDetail1') {
-          //     return JdPageDetail();
-          //   }
-          // },
-          // navigateToTargetCallBack: (context,page){
-          //   router.currentTargetPage.value = page;
-          // },
-          pageMap: {'/': const Login()},
-          exitWindowStyle:_confirmExit
-      );
-      
-      Future<bool> _confirmExit(BuildContext context) async {
-        final result = await showDialog<bool>(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                content: const Text('确定要退出App吗?'),
-                actions: [
-                  TextButton(
-                    child: const Text('取消'),
-                    onPressed: () => Navigator.pop(context, true),
-                  ),
-                  TextButton(
-                    child: const Text('确定'),
-                    onPressed: () => Navigator.pop(context, false),
-                  ),
-                ],
-              );
-            });
-        return result ?? true;
-      }
+- ✅ Flutter 页面也能享受 **原生生命周期感知**
+- ✅ 提供更优雅的 **路由跳转/关闭 API**
+- ✅ **解耦设计**：路由和生命周期可单独使用
+- ✅ 支持 **跨平台（App & Web）**
 
+## 📦 安装
 
-##### 2.MaterialApp.router 注册RouterProxy
+在 `pubspec.yaml` 中添加：
 
-    void main() {
-   	  runApp(MyApp());
-   	}
-   	
-   	class MyApp extends StatelessWidget {
-   	  MyApp({Key? key}) : super(key: key)
-   	  @override
-   	  Widget build(BuildContext context) {
-   		return MaterialApp.router(
-   		  title: 'router_lifecycle',
-   		  debugShowCheckedModeBanner: false,
-   		  routerDelegate: router, //绑定路由跳转工具
-   		  routeInformationParser: router.defaultParser(),//路由解析器,可自定义传入
-   		);
-   	  }
-   	}
+```yaml
+dependencies:
+  router_pro: ^0.1.1 //原flutter_router_forzzh：0.0.6（最后版本依赖地址，停止更新）
+```
 
+导入：
 
-    1 页面的跳转使用 router.push(); router.pushNamed()等
-    
-    2 页面的关闭使用 router.pop();
+```dart
+import 'package:router_pro/router_lib.dart';
+```
 
+---
 
+## ⚡ 功能一：路由代理（RouterProxy）
 
-# 功能2：
+### 全局注册
 
-#### 2.对需要监听生命周期的页面做任务。
+```dart
+RouterProxy router = RouterProxy.getInstance(
+  pageMap: {'/': const Login()},
+  exitWindowStyle: _confirmExit,
+);
+```
 
-#####2.1 StatefulWidget页面：
+```dart
+MaterialApp.router(
+  routerDelegate: router,
+  routeInformationParser: router.defaultParser(),
+);
+```
 
-#####2.2 StatelessWidget页面：
+### 页面跳转
 
-	class Login extends StatelessWidget {
-    const Login({Key? key}) : super(key: key);
-    @override
-    Widget build(BuildContext context) {
-      return LifeCycle(
-        onCreate: (){
-          print("--------Login onCreate");
-        },
-        onStart: (){
-          print("--------Login onStart");
-        },
-        onResume: (){
-          print("--------Login onResume");
-        },
-        onPause: (){
-          print("--------Login onPause");
-        },
-        onDestroy: (){
-          print("--------Login onDestroy");
-        },
-          child: Scaffold(
-          body: Stack(
-            children: [
-              Container(
-                constraints: const BoxConstraints.expand(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-  
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        const SizedBox(
-                          width: 16,
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            primary: Theme.of(context).primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4.0),
-                            ),
-                            side: BorderSide(
-                                color: Theme.of(context).primaryColor),
-                          ),
-                          onPressed: () {},
-                          child: const Text(
-                            '注册',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        const SizedBox(
-                          width: 16,
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            primary: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4.0),
-                            ),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                          onPressed: () {
-                            router.push(page: NavPage());
-                          },
-                          child: const Text('登录', style: TextStyle(color: Colors.black),),
-                        ),
-                        const SizedBox(
-                          width: 16,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          )
-      ));
-    }}
+```dart
+router.push();  //跳转页面 widget方式
+router.pushNamed(); //跳转页面 路由path方式
+router.replace(); //替换当前页面
+router.popAndPushNamed(); //pop当前页面，然后push一个新页面
+router.pushAndRemoveAll();//清空页面栈并push新页面
+router.pushNamedAndRemoveAll();// 跳转到指定页面，并清空之前的所有页面
+router.pushStackTop();//将页面置于栈顶（如果已存在则先移除）
+
+//举例：
+router.push(
+  page:const TaoBaoPageDetail(),
+  onResult: (value){ //可选
+    setState((){
+      title = "淘宝页面$value";
+    });
+  });
+router.pushNamed(
+  name: '/TaoBaoPageDetail',
+  onResult: (value){ //可选
+    setState((){
+      title = "淘宝页面$value";
+    });
+  });
+```
+### 页面关闭 & 回传
+
+```dart
+router.pop(); //关闭当前页面
+router.popWithResult(); //关闭当前页面,主要用于（dailog,BottomSheet..）
+
+举例：
+router.popWithResult("返回值：hello"); //返回值可选
+router.pop("返回值：hello"); //返回值可选
+```
+
+### 无需 context 的弹窗
+
+```dart
+router.showAppBottomSheet()
+router.showAppDialog()
+router.showAppSnackBar()
+
+举例：
+router.showAppBottomSheet(builder: (context){
+     return  Container(
+       height: 400,
+       width: MediaQuery.of(context).size.width,
+       color: Colors.red,
+       child: GestureDetector(
+         onTap: (){
+           router.popWithResult("这是返回结果");
+         },
+         child: const Text('点击我获取BottomSheet返回值'),
+       ),
+     );
+   }).then((value){
+       debugPrint("showAppBottomSheet value:${value}");
+});
+```
+---
+
+## ⚡ 功能二：生命周期感知
+
+让 **StatelessWidget / StatefulWidget** 具备 `onResume / onPause / onDestroy` 能力：
+
+```dart
+class Login extends StatelessWidget {
+  const Login({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return LifeCycle(
+      onCreate: () => print("Login onCreate"),
+      onStart: () => print("Login onStart"),
+      onResume: () => print("Login onResume"),
+      onPause: () => print("Login onPause"),
+      onDestroy: () => print("Login onDestroy"),
+      child: Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () => router.push(page: NavPage()),
+            child: const Text("登录"),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
 
 
-其他：
 
- 1.exitWindowStyle:可自定义退出程序提示框
+---
 
- 2.web端需要支持浏览器直接跳转访问某页面需要自定义routeInformationParser并继承 RouteParser类做解析器
+## 🛠 其他说明
+
+- `ExitWindowStyle`：可自定义退出程序提示框
+- Web 端：支持浏览器直达，需要自定义 `RouteParser`
 
 
-效果如下：
+
+---
+
+## 🎬 效果演示
 
 ![](https://github.com/zhengzaihong/router_lifecycle/blob/master/images/GIF.gif)
+
+
+MIT License © [zhengzaihong](https://github.com/zhengzaihong)

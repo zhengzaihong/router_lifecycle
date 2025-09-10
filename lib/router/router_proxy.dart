@@ -10,14 +10,36 @@ import 'empty_page.dart';
 /// create_date: 2022-12-05
 /// create_time: 09:12
 /// describe 基于路由2.0实现界面跳转
+/// 支持1.0中的路由传值，回传取值
+/// exitStyleCallBack 例子：
+///   Future<bool> _confirmExit(BuildContext context) async {
+///     final result = await showDialog<bool>(
+///         context: context,
+///         builder: (context) {
+///           return AlertDialog(
+///             content: const Text('确定要退出App吗?'),
+///             actions: [
+///               TextButton(
+///                 child: const Text('取消'),
+///                 onPressed: () => Navigator.pop(context, true),
+///               ),
+///               TextButton(
+///                 child: const Text('确定'),
+///                 onPressed: () => Navigator.pop(context, false),
+///               ),
+///             ],
+///           );
+///         });
+///     return result ?? true;
+///   }
 ///
 typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
-
 typedef ExitWindowStyle = Future<bool> Function(BuildContext context);
-
 typedef NavigateToTargetCallBack = void Function(BuildContext context, Widget? page);
+typedef ResultCallBack = void Function(dynamic result);
 
-class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
+class RouterProxy extends RouterDelegate<RouteInformation>
+    with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
   /// 可用于动态路由实现跳转
   RoutePathCallBack? _routePathCallBack;
 
@@ -39,6 +61,7 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
 
   /// 具体的页面集
   final List<MaterialPage> _pages = [];
+  final Map<int,ResultCallBack?> _result = {};
 
   /// 通知特定的页面 ValueListenableBuilder
   ValueNotifier<Widget?> currentTargetPage = ValueNotifier(null);
@@ -110,12 +133,6 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
     }
   }
 
-  void pop() async {
-    if (canPop()) {
-      _pages.removeLast();
-    }
-    notify();
-  }
 
   @override
   Future<void> setNewRoutePath(RouteInformation configuration) async {
@@ -150,42 +167,67 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
       return false;
     }
     if (canPop()) {
-      _pages.removeLast();
+      //保证popWithResult和pop在退出页面时都能触发返回
+      // _pages.removeLast();
+      // debugPrint("result:$result");
+      _popAndOnResult(result);
       return true;
     }
     return false;
   }
 
   /// 推出一个新页面到导航栈
-  void push(
+  void push<T>(
       {required Widget page,
+      ResultCallBack? onResult,
       String? name,
       Object? arguments,
-      String? restorationId}) {
-    var routeSettings = RouteSettings(
+      String? restorationId,
+      bool maintainState = true,
+      bool fullscreenDialog = false,
+      bool allowSnapshotting = true}) {
+    final routeSettings = RouteSettings(
         name: name ?? page.runtimeType.toString(), arguments: arguments);
-
-    _pages.add(MaterialPage(
+    final target = MaterialPage(
         child: page,
         name: routeSettings.name,
         arguments: routeSettings.arguments,
-        restorationId: restorationId));
-
+        restorationId: restorationId,
+        maintainState: maintainState,
+        fullscreenDialog: fullscreenDialog,
+        allowSnapshotting: allowSnapshotting);
+    _pages.add(target);
+    _result[target.hashCode] = onResult;
     notify();
   }
 
   /// 获取当前显示的页面Widget
-  Widget getCurrentPage() {
-    return (_pages.last).child;
-  }
+  Widget getCurrentPage()=>_pages.last.child;
 
   /// 获取当前显示页面的MaterialPage对象，可用于获取参数
-  MaterialPage getCurrentMaterialPage() {
-    return (_pages.last);
+  MaterialPage getCurrentMaterialPage()=>_pages.last;
+
+  ///获取当前显示页面的参数
+  T? getArguments<T>() {
+    if (_pages.isNotEmpty) {
+      return _pages.last.arguments as T?;
+    }
+    return null;
   }
 
-  /// 关闭当前页面，并附带返回值
-  ///
+  void pop<T>([T? result]) async {
+    if (canPop()) {
+      _popAndOnResult(result);
+    }
+    notify();
+  }
+  void _popAndOnResult<T>([T? result]){
+    final page = _pages.removeLast();
+    _result[page.hashCode]?.call(result);
+    _result.remove(page.hashCode);
+  }
+
+  /// 关闭当前窗口，并附带返回值
   /// 示例:
   /// RouterProxy.getInstance().popWithResult('从页面返回的数据');
   void popWithResult<T>([T? result]) {
@@ -194,99 +236,6 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
     }
   }
 
-  /// 显示一个通用的对话框(Dialog)
-  ///
-  /// 示例:
-  /// RouterProxy.getInstance().showAppDialog(
-  ///   builder: (context) => AlertDialog(
-  ///     title: Text('提示'),
-  ///     content: Text('这是一个通过路由服务显示的对话框。'),
-  ///     actions: <Widget>[
-  ///       TextButton(
-  ///         child: Text('确定'),
-  ///         onPressed: () => Navigator.of(context).pop(),
-  ///       ),
-  ///     ],
-  ///   ),
-  /// );
-  Future<T?> showAppDialog<T>({
-    required WidgetBuilder builder,
-    bool barrierDismissible = true,
-    Color? barrierColor = Colors.black54,
-    String? barrierLabel,
-    bool useSafeArea = true,
-    bool useRootNavigator = true,
-    RouteSettings? routeSettings,
-    Offset? anchorPoint,
-  }) {
-    if (_context == null) return Future.value(null);
-    return showDialog<T>(
-      context: _context!,
-      builder: builder,
-      barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor,
-      barrierLabel: barrierLabel,
-      useSafeArea: useSafeArea,
-      useRootNavigator: useRootNavigator,
-      routeSettings: routeSettings,
-      anchorPoint: anchorPoint,
-    );
-  }
-
-  /// 显示一个通用的模态底部面板(Modal Bottom Sheet)
-  ///
-  /// 示例:
-  /// RouterProxy.getInstance().showAppBottomSheet(
-  ///   builder: (context) => Container(
-  ///     height: 200,
-  ///     child: Center(child: Text('这是一个底部面板')),
-  ///   ),
-  /// );
-  Future<T?> showAppBottomSheet<T>({
-    required WidgetBuilder builder,
-    bool isScrollControlled = false,
-    Color? backgroundColor,
-    double? elevation,
-    ShapeBorder? shape,
-    Clip? clipBehavior,
-    BoxConstraints? constraints,
-    Color? barrierColor,
-    bool useRootNavigator = false,
-    bool isDismissible = true,
-    bool enableDrag = true,
-    RouteSettings? routeSettings,
-    AnimationController? transitionAnimationController,
-    Offset? anchorPoint,
-  }) {
-    if (_context == null) return Future.value(null);
-    return showModalBottomSheet<T>(
-      context: _context!,
-      builder: builder,
-      backgroundColor: backgroundColor,
-      elevation: elevation,
-      shape: shape,
-      clipBehavior: clipBehavior,
-      constraints: constraints,
-      barrierColor: barrierColor,
-      useRootNavigator: useRootNavigator,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      routeSettings: routeSettings,
-      transitionAnimationController: transitionAnimationController,
-      anchorPoint: anchorPoint,
-      isScrollControlled: isScrollControlled,
-    );
-  }
-
-  /// 显示一个提示条(SnackBar)
-  ///
-  /// 示例:
-  /// RouterProxy.getInstance().showAppSnackBar(message: '这是一个提示！');
-  void showAppSnackBar({required String message}) {
-    if (_context == null) return;
-    final snackBar = SnackBar(content: Text(message));
-    ScaffoldMessenger.of(_context!).showSnackBar(snackBar);
-  }
 
   /// 替换当前页面
   void replace(
@@ -304,21 +253,6 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
         restorationId: restorationId);
   }
 
-  /// 跳转到指定页面，并清空之前的所有页面
-  void pushNamedAndRemove(
-      {required String name,
-      Object? arguments,
-      Widget? emptyPage,
-      String? restorationId}) {
-    if (_pages.isNotEmpty) {
-      _pages.clear();
-    }
-    pushNamed(
-        name: name,
-        arguments: arguments,
-        emptyPage: emptyPage,
-        restorationId: restorationId);
-  }
 
   /// pop当前页面，然后push一个新页面
   void popAndPushNamed(
@@ -332,13 +266,14 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
   /// 根据名称跳转页面
   void pushNamed(
       {required String name,
+        ResultCallBack? onResult,
       Object? arguments,
       Widget? emptyPage,
-      bool custom = false,
+      bool custom = true,
       String? restorationId}) {
     var page = pageMap?[name];
     _location = name;
-    if (custom) {
+    if (custom && page == null) {
       page = _routePathCallBack
           ?.call(RouteInformation(uri: Uri.parse(_location!)));
     }
@@ -349,6 +284,7 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
     push(
         page: page,
         name: name,
+        onResult: onResult,
         arguments: arguments,
         restorationId: restorationId);
   }
@@ -361,9 +297,24 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
   }
 
   /// 清空页面栈并push新页面
-  void pushAndRemoveUntil(Widget page) {
+  void pushAndRemoveAll(Widget page) {
     pages.clear();
     push(page: page);
+  }
+  /// 跳转到指定页面，并清空之前的所有页面
+  void pushNamedAndRemoveAll(
+      {required String name,
+        Object? arguments,
+        Widget? emptyPage,
+        String? restorationId}) {
+    if (_pages.isNotEmpty) {
+      _pages.clear();
+    }
+    pushNamed(
+        name: name,
+        arguments: arguments,
+        emptyPage: emptyPage,
+        restorationId: restorationId);
   }
 
   /// 将页面置于栈顶（如果已存在则先移除）
@@ -388,6 +339,100 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
 
   void notify() {
     notifyListeners();
+  }
+
+
+
+
+  /// 显示一个通用的对话框(Dialog)
+  /// 示例:
+  /// RouterProxy.getInstance().showAppDialog(
+  ///   builder: (context) => AlertDialog(
+  ///     title: Text('提示'),
+  ///     content: Text('这是一个通过路由服务显示的对话框。'),
+  ///     actions: <Widget>[
+  ///       TextButton(
+  ///         child: Text('确定'),
+  ///         onPressed: () => Navigator.of(context).pop(),
+  ///       ),
+  ///     ],
+  ///   ),
+  /// );
+  Future<T?> showAppDialog<T>({
+    required WidgetBuilder builder,
+    bool barrierDismissible = true,
+    Color? barrierColor = Colors.black54,
+    String? barrierLabel,
+    bool useSafeArea = true,
+    bool useRootNavigator = true,
+    RouteSettings? routeSettings,
+    Offset? anchorPoint,
+  }) async {
+    if (_context == null) return Future.value(null);
+    return showDialog<T>(
+      context: _context!,
+      builder: builder,
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor,
+      barrierLabel: barrierLabel,
+      useSafeArea: useSafeArea,
+      useRootNavigator: useRootNavigator,
+      routeSettings: routeSettings,
+      anchorPoint: anchorPoint,
+    );
+  }
+
+  /// 显示一个通用的模态底部面板(Modal Bottom Sheet)
+  /// 示例:
+  /// RouterProxy.getInstance().showAppBottomSheet(
+  ///   builder: (context) => Container(
+  ///     height: 200,
+  ///     child: Center(child: Text('这是一个底部面板')),
+  ///   ),
+  /// );
+  Future<T?> showAppBottomSheet<T>({
+    required WidgetBuilder builder,
+    bool isScrollControlled = false,
+    Color? backgroundColor,
+    double? elevation,
+    ShapeBorder? shape,
+    Clip? clipBehavior,
+    BoxConstraints? constraints,
+    Color? barrierColor,
+    bool useRootNavigator = false,
+    bool isDismissible = true,
+    bool enableDrag = true,
+    RouteSettings? routeSettings,
+    AnimationController? transitionAnimationController,
+    Offset? anchorPoint,
+  }) async {
+    if (_context == null) return Future.value(null);
+    return showModalBottomSheet<T>(
+      context: _context!,
+      builder: builder,
+      backgroundColor: backgroundColor,
+      elevation: elevation,
+      shape: shape,
+      clipBehavior: clipBehavior,
+      constraints: constraints,
+      barrierColor: barrierColor,
+      useRootNavigator: useRootNavigator,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
+      routeSettings: routeSettings,
+      transitionAnimationController: transitionAnimationController,
+      anchorPoint: anchorPoint,
+      isScrollControlled: isScrollControlled,
+    );
+  }
+
+  /// 显示一个提示条(SnackBar)
+  /// 示例:
+  /// RouterProxy.getInstance().showAppSnackBar(message: '这是一个提示！');
+  void showAppSnackBar({required String message}) {
+    if (_context == null) return;
+    final snackBar = SnackBar(content: Text(message));
+    ScaffoldMessenger.of(_context!).showSnackBar(snackBar);
   }
 
   /// 非页面跳转，只切换到目标页面 (例如主页的Tab切换)
@@ -422,26 +467,4 @@ class RouterProxy extends RouterDelegate<RouteInformation> with ChangeNotifier, 
   void clearTargets() {
     _targetPageQueue.clear();
   }
-
-  /// exitStyleCallBack 例子：
-  ///   Future<bool> _confirmExit(BuildContext context) async {
-  ///     final result = await showDialog<bool>(
-  ///         context: context,
-  ///         builder: (context) {
-  ///           return AlertDialog(
-  ///             content: const Text('确定要退出App吗?'),
-  ///             actions: [
-  ///               TextButton(
-  ///                 child: const Text('取消'),
-  ///                 onPressed: () => Navigator.pop(context, true),
-  ///               ),
-  ///               TextButton(
-  ///                 child: const Text('确定'),
-  ///                 onPressed: () => Navigator.pop(context, false),
-  ///               ),
-  ///             ],
-  ///           );
-  ///         });
-  ///     return result ?? true;
-  ///   }
 }

@@ -3,35 +3,38 @@ import 'package:flutter/material.dart';
 import 'package:router_pro/router_lib.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
 import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
-import 'package:router_lifecycle_example/router_helper.dart';
+import 'package:router_lifecycle_example/router.dart';
 
 class JdPageDetail extends StatelessWidget {
+  const JdPageDetail({super.key});
+
 
   @override
   Widget build(BuildContext context) {
     return LifeCycle(
         onCreate: (){
-          print("--------JdPageDetail onCreate");
+          debugPrint("--------JdPageDetail onCreate");
         },
         onStart: (){
-          print("--------JdPageDetail onStart");
+          debugPrint("--------JdPageDetail onStart");
         },
         onResume: (){
-          print("--------JdPageDetail onResume");
+          debugPrint("--------JdPageDetail onResume");
+          // final argument = router.getArguments<Object?>();
+          // debugPrint("--------JdPageDetail argument:${argument.toString()}");
         },
         onPause: (){
-          print("--------JdPageDetail onPause");
+          debugPrint("--------JdPageDetail onPause");
         },
         onDestroy: (){
-          print("--------JdPageDetail onDestroy");
+          debugPrint("--------JdPageDetail onDestroy");
         },
         child: Scaffold(
       appBar: AppBar(
         leading: GestureDetector(
           onTap: (){
             router.pop();
-            // print(router.getCurrentPage().runtimeType.toString());
-            // print(router.getCurrentMaterialPage().arguments);
+            // router.popWithResult("详情的返回值：hello");
           },
           child: const Icon(Icons.arrow_back_ios,size: 30,color: Colors.red),
         ),
@@ -40,17 +43,9 @@ class JdPageDetail extends StatelessWidget {
         children:  [
           Expanded(child:   Center(child:  GestureDetector(
             onTap: (){
-              // showDialog(context: context,
-              //     builder: (context){
-              //       return AlertDialog(
-              //         content:  Container(
-              //           height: 400,
-              //           child: const Text('aaaaaaaaaaaaaaaaaaaaaaa'),
-              //         ),
-              //       );
-              //     });
 
-              router.pushAndRemoveUntil(Login());
+              router.pushAndRemoveAll(const Login());
+
 
             },
             child: ValueListenableBuilder(

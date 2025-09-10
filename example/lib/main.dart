@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:router_lifecycle_example/router_helper.dart';
+import 'package:router_lifecycle_example/router.dart';
 
 void main() {
   // final String url = window.location.href;
@@ -14,7 +14,7 @@ void main() {
   // print('--> userInfo: ${uri.userInfo}');
 
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

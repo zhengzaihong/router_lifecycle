@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
+import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
 import 'package:router_pro/router/router_proxy.dart';
 
 RouterProxy router = RouterProxy.getInstance(
-    // routePathCallBack: (routeInformation) {
-    //   print('routeInformation.location:${routeInformation.uri}');
-    //   //自定义的动态路由 跳转
-    //   if (routeInformation.uri.toString() == 'TaoBaoPageDetail1') {
-    //     return JdPageDetail();
-    //   }
-    // },
+    routePathCallBack: (routeInformation) {
+      debugPrint('-----routeInformation.location:${routeInformation.uri}');
+      //自定义的动态路由 跳转
+      if (routeInformation.uri.toString() == 'TaoBaoPageDetail') {
+        return const TaoBaoPageDetail();
+      }
+    },
     // navigateToTargetCallBack: (context,page){
     //   router.currentTargetPage.value = page;
     // },

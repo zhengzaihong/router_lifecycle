@@ -3,10 +3,10 @@ import 'package:router_pro/router_lib.dart';
 import 'package:router_lifecycle_example/models/home_bottom_menu_bean.dart';
 import 'package:router_lifecycle_example/pages/jd_page.dart';
 import 'package:router_lifecycle_example/pages/taobao_page.dart';
-import 'package:router_lifecycle_example/router_helper.dart';
+import 'package:router_lifecycle_example/router.dart';
 
 class NavPage extends StatefulWidget {
-  NavPage({Key? key}) : super(key: key);
+  const NavPage({Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _NavPageState();
@@ -21,14 +21,13 @@ class _NavPageState extends State<NavPage>{
 
   int currentIndex = 0;
   final List<Widget> pageList = [
-    TaoBaoPage(),
-    JdPage(),
+    const TaoBaoPage(),
+    const JdPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
       body: IndexedStack(
         index: currentIndex,
         children: pageList,

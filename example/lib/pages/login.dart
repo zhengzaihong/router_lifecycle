@@ -1,90 +1,89 @@
-
 import 'package:flutter/material.dart';
 import 'package:router_pro/router_lib.dart';
 import 'package:router_lifecycle_example/pages/nav_page.dart';
 import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
-import 'package:router_lifecycle_example/router_helper.dart';
+import 'package:router_lifecycle_example/router.dart';
 
+class Login extends StatelessWidget {
+  const Login({Key? key}) : super(key: key);
 
-  class Login extends StatelessWidget {
-    const Login({Key? key}) : super(key: key);
-    @override
-    Widget build(BuildContext context) {
-      return LifeCycle(
-        onCreate: (){
-          print("--------Login onCreate");
+  @override
+  Widget build(BuildContext context) {
+    return LifeCycle(
+        onCreate: () {
+          debugPrint("------onCreate--Login ${this.hashCode}");
         },
-        onStart: (){
-          print("--------Login onStart");
+        onStart: () {
+          debugPrint("--------Login onStart");
         },
-        onResume: (){
-          print("--------Login onResume");
+        onResume: () {
+          debugPrint("--------Login onResume");
         },
-        onPause: (){
-          print("--------Login onPause");
+        onPause: () {
+          debugPrint("--------Login onPause");
         },
-        onDestroy: (){
-          print("--------Login onDestroy");
+        onDestroy: () {
+          debugPrint("------onDestroy--Login ${this.hashCode}");
         },
-          child: Scaffold(
-          body: Stack(
-            children: [
-              Container(
-                constraints: const BoxConstraints.expand(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        const SizedBox(
-                          width: 16,
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4.0),
-                            ),
-                            side: BorderSide(
-                                color: Theme.of(context).primaryColor),
+        child: Scaffold(
+            body: Stack(
+          children: [
+            Container(
+              constraints: const BoxConstraints.expand(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4.0),
                           ),
-                          onPressed: () {
-                            router.pushNamed(name: 'hhahaha');
-
-                          },
-                          child: const Text(
-                            '注册',
-                            style: TextStyle(color: Colors.black),
+                          side:
+                              BorderSide(color: Theme.of(context).primaryColor),
+                        ),
+                        onPressed: () {
+                          router.pushNamed(name: 'hhahaha');
+                        },
+                        child: const Text(
+                          '注册',
+                          style: TextStyle(color: Colors.black),
+                        ),
+                      ),
+                      const SizedBox(
+                        width: 16,
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4.0),
                           ),
+                          side: const BorderSide(color: Colors.black),
                         ),
-                        const SizedBox(
-                          width: 16,
+                        onPressed: () {
+                          router.push(page: const NavPage());
+                        },
+                        child: const Text(
+                          '登录',
+                          style: TextStyle(color: Colors.black),
                         ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4.0),
-                            ),
-                            side: const BorderSide(color: Colors.black),
-                          ),
-                          onPressed: () {
-                            router.push(page: NavPage());
-                          },
-                          child: const Text('登录', style: TextStyle(color: Colors.black),),
-                        ),
-                        const SizedBox(
-                          width: 16,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      const SizedBox(
+                        width: 16,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          )
-      ));
-    }
+            ),
+          ],
+        )));
   }
+}
