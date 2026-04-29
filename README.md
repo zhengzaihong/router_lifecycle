@@ -336,11 +336,185 @@ RouterProxy router = RouterProxy.getInstance(
 // When accessing a non-existent route, the 404 page will be displayed
 router.pushNamed(name: '/not-exist');
 ```
+
 ---
 
-## ⚡ Function 2: Life cycle perception
+## ⚡ Feature 3: Enhanced Route Parser
 
-make **StatelessWidget / StatefulWidget** have `onResume / onPause / onDestroy` ability：
+### Basic Parser (CustomParser)
+
+Default simple parser that does no parsing:
+
+```dart
+MaterialApp.router(
+  routerDelegate: router,
+  routeInformationParser: router.defaultParser(), // CustomParser
+);
+```
+
+### Enhanced Parser (EnhancedParser)
+
+Supports advanced features like path parameters, query parameters, and route aliases:
+
+```dart
+final parser = EnhancedParser(
+  enablePathParams: true,      // Enable path parameter parsing
+  enableQueryParams: true,      // Enable query parameter parsing
+  routeAliases: {               // Route aliases
+    '/home': '/',
+    '/profile': '/user/me',
+  },
+  patterns: [                   // Route patterns
+    RoutePattern('/user/:id'),
+    RoutePattern('/product/:category/:id'),
+    RoutePattern('/posts/:year/:month/:day'),
+  ],
+);
+
+MaterialApp.router(
+  routerDelegate: router,
+  routeInformationParser: parser,
+);
+```
+
+### Path Parameter Parsing
+
+Supports `:param` format path parameters:
+
+```dart
+// Define route patterns
+final parser = EnhancedParser(
+  patterns: [
+    RoutePattern('/user/:id'),
+    RoutePattern('/product/:category/:id'),
+  ],
+);
+
+// Get parameters in routePathCallBack
+RouterProxy.getInstance(
+  routePathCallBack: (routeInfo) {
+    final params = RouteParams.fromState(routeInfo.state);
+    
+    if (params?.matchedPattern == '/user/:id') {
+      final userId = params!.getPathParam('id');
+      return UserDetailPage(userId: userId!);
+    }
+    
+    return null;
+  },
+);
+
+// Usage
+router.pushNamed(name: '/user/123');
+// Parsed result: {id: '123'}
+```
+
+### Query Parameter Parsing
+
+Automatically parses URL query parameters:
+
+```dart
+// URL: /search?q=Flutter&page=2
+
+final parser = EnhancedParser(
+  enableQueryParams: true,
+);
+
+// Get parameters in routePathCallBack
+RouterProxy.getInstance(
+  routePathCallBack: (routeInfo) {
+    final params = RouteParams.fromState(routeInfo.state);
+    
+    if (routeInfo.uri.path == '/search') {
+      final keyword = params?.getQueryParam('q');
+      final page = params?.getQueryParam('page');
+      return SearchResultPage(keyword: keyword!, page: int.parse(page!));
+    }
+    
+    return null;
+  },
+);
+
+// Usage
+router.pushNamed(name: '/search?q=Flutter&page=2');
+// Parsed result: {q: 'Flutter', page: '2'}
+```
+
+### Route Aliases
+
+Define aliases for routes:
+
+```dart
+final parser = EnhancedParser(
+  routeAliases: {
+    '/home': '/',
+    '/profile': '/user/me',
+    '/settings': '/user/settings',
+  },
+);
+
+// Navigate using aliases
+router.pushNamed(name: '/home');      // Actually navigates to /
+router.pushNamed(name: '/profile');   // Actually navigates to /user/me
+```
+
+### Combined Usage
+
+Path parameters and query parameters can be used together:
+
+```dart
+// URL: /product/electronics/123?color=red&size=large
+
+final parser = EnhancedParser(
+  enablePathParams: true,
+  enableQueryParams: true,
+  patterns: [
+    RoutePattern('/product/:category/:id'),
+  ],
+);
+
+// Parsed result:
+// pathParams: {category: 'electronics', id: '123'}
+// queryParams: {color: 'red', size: 'large'}
+```
+
+### Use Cases
+
+**1. Web Deep Linking**
+```dart
+// User directly visits: https://example.com/product/electronics/123?color=red
+// Automatically parses parameters and displays corresponding page
+```
+
+**2. Share Links**
+```dart
+// Generate share link
+final shareUrl = 'https://example.com/product/electronics/123';
+// User clicks link and automatically navigates to product detail page
+```
+
+**3. Notification Navigation**
+```dart
+// Notification carries deep link
+void handleNotification(String deepLink) {
+  // deepLink: /user/123?tab=posts
+  router.pushNamed(name: deepLink);
+  // Automatically parses and navigates to user page posts tab
+}
+```
+
+**4. SEO Optimization**
+```dart
+// Friendly URL structure
+// /blog/2024/01/15/my-post-title
+// Instead of /blog?id=123
+```
+
+---
+
+## ⚡ Feature 4: Lifecycle Awareness
+
+Make **StatelessWidget / StatefulWidget** have `onResume / onPause / onDestroy` ability：
 
 ```dart
 class Login extends StatelessWidget {

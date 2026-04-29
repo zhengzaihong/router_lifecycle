@@ -32,6 +32,12 @@
 - 新增 `removeRouteGuard()` 方法
 - 新增 `clearRouteGuards()` 方法
 
+**新增类:**
+- `EnhancedParser` - 增强的路由解析器
+- `RoutePattern` - 路由模式匹配类
+- `RouteParams` - 路由参数辅助类
+
+
 **LifeCycle:**
 - 新增 `visibilityThreshold` 参数（默认1.0）
 - 新增 `debugLabel` 参数

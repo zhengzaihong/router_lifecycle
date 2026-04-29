@@ -3,8 +3,10 @@ library router_pro;
 export 'router/route_parser.dart';
 export 'router/router_proxy.dart';
 export 'router/custom_parser.dart';
+export 'router/enhanced_parser.dart';
+export 'router/route_pattern.dart';
 export 'wrapper/life_cycle.dart';
 // export 'router/empty_page.dart';
 export 'router/drawer_router.dart';
-export 'router/drawer_router stack.dart';
+export 'router/drawer_router_stack.dart';
 

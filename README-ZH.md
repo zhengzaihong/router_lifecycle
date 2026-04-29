@@ -336,9 +336,199 @@ RouterProxy router = RouterProxy.getInstance(
 // 访问不存在的路由时会显示404页面
 router.pushNamed(name: '/not-exist');
 ```
+
 ---
 
-## ⚡ 功能二：生命周期感知
+## ⚡ 功能三：增强的路由解析器
+
+### 基本解析器（CustomParser）
+
+默认的简单解析器，不做任何解析：
+
+```dart
+MaterialApp.router(
+  routerDelegate: router,
+  routeInformationParser: router.defaultParser(), // CustomParser
+);
+```
+
+### 增强解析器（EnhancedParser）
+
+支持路径参数、查询参数、路由别名等高级功能：
+
+```dart
+final parser = EnhancedParser(
+  enablePathParams: true,      // 启用路径参数解析
+  enableQueryParams: true,      // 启用查询参数解析
+  routeAliases: {               // 路由别名
+    '/home': '/',
+    '/profile': '/user/me',
+  },
+  patterns: [                   // 路由模式
+    RoutePattern('/user/:id'),
+    RoutePattern('/product/:category/:id'),
+    RoutePattern('/posts/:year/:month/:day'),
+  ],
+);
+
+MaterialApp.router(
+  routerDelegate: router,
+  routeInformationParser: parser,
+);
+```
+
+### 路径参数解析
+
+支持 `:param` 格式的路径参数：
+
+```dart
+// 定义路由模式
+final parser = EnhancedParser(
+  patterns: [
+    RoutePattern('/user/:id'),
+    RoutePattern('/product/:category/:id'),
+  ],
+);
+
+// 在 routePathCallBack 中获取参数
+RouterProxy.getInstance(
+  routePathCallBack: (routeInfo) {
+    final params = RouteParams.fromState(routeInfo.state);
+    
+    if (params?.matchedPattern == '/user/:id') {
+      final userId = params!.getPathParam('id');
+      return UserDetailPage(userId: userId!);
+    }
+    
+    return null;
+  },
+);
+
+// 使用
+router.pushNamed(name: '/user/123');
+// 解析结果: {id: '123'}
+```
+
+### 查询参数解析
+
+自动解析 URL 查询参数：
+
+```dart
+// URL: /search?q=Flutter&page=2
+
+final parser = EnhancedParser(
+  enableQueryParams: true,
+);
+
+// 在 routePathCallBack 中获取参数
+RouterProxy.getInstance(
+  routePathCallBack: (routeInfo) {
+    final params = RouteParams.fromState(routeInfo.state);
+    
+    if (routeInfo.uri.path == '/search') {
+      final keyword = params?.getQueryParam('q');
+      final page = params?.getQueryParam('page');
+      return SearchResultPage(keyword: keyword!, page: int.parse(page!));
+    }
+    
+    return null;
+  },
+);
+
+// 使用
+router.pushNamed(name: '/search?q=Flutter&page=2');
+// 解析结果: {q: 'Flutter', page: '2'}
+```
+
+### 路由别名
+
+为路由定义别名：
+
+```dart
+final parser = EnhancedParser(
+  routeAliases: {
+    '/home': '/',
+    '/profile': '/user/me',
+    '/settings': '/user/settings',
+  },
+);
+
+// 使用别名跳转
+router.pushNamed(name: '/home');      // 实际跳转到 /
+router.pushNamed(name: '/profile');   // 实际跳转到 /user/me
+```
+
+### 混合使用
+
+路径参数和查询参数可以同时使用：
+
+```dart
+// URL: /product/electronics/123?color=red&size=large
+
+final parser = EnhancedParser(
+  enablePathParams: true,
+  enableQueryParams: true,
+  patterns: [
+    RoutePattern('/product/:category/:id'),
+  ],
+);
+
+// 解析结果:
+// pathParams: {category: 'electronics', id: '123'}
+// queryParams: {color: 'red', size: 'large'}
+
+// 在页面中使用
+class ProductDetailPage extends StatelessWidget {
+  final String category;
+  final String productId;
+  final String? color;
+  final String? size;
+  
+  // 从 routePathCallBack 传入
+  const ProductDetailPage({
+    required this.category,
+    required this.productId,
+    this.color,
+    this.size,
+  });
+}
+```
+
+### 应用场景
+
+**1. Web 深度链接**
+```dart
+// 用户直接访问: https://example.com/product/electronics/123?color=red
+// 自动解析参数并显示对应页面
+```
+
+**2. 分享链接**
+```dart
+// 生成分享链接
+final shareUrl = 'https://example.com/product/electronics/123';
+// 用户点击链接后自动跳转到商品详情页
+```
+
+**3. 通知跳转**
+```dart
+// 通知携带深度链接
+void handleNotification(String deepLink) {
+  // deepLink: /user/123?tab=posts
+  router.pushNamed(name: deepLink);
+  // 自动解析并跳转到用户页面的帖子标签
+}
+```
+
+**4. 搜索引擎优化（SEO）**
+```dart
+// 友好的 URL 结构
+// /blog/2024/01/15/my-post-title
+// 而不是 /blog?id=123
+```
+
+---
+
+## ⚡ 功能四：生命周期感知
 
 让 **StatelessWidget / StatefulWidget** 具备 `onResume / onPause / onDestroy` 能力：
 
@@ -394,7 +584,7 @@ LifeCycle(
 
 ---
 
-## ⚡ 功能三：可见性检测（VisibilityDetector）
+## ⚡ 功能五：可见性检测（VisibilityDetector）
 
 底层可见性检测组件，支持精确的可见性监控。
 

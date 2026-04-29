@@ -37,6 +37,47 @@ void initRouter() {
     },
     notFoundPage: const NotFoundPage(),
     exitWindowStyle: _confirmExit,
+    routePathCallBack: (routeInfo) {
+      // 动态路由回调 - 用于处理路径参数
+      final path = routeInfo.uri.path;
+      
+      // 从 state 中获取解析后的参数
+      final params = RouteParams.fromState(routeInfo.state);
+      
+      if (params != null) {
+        // /user/:id - 用户详情
+        if (params.matchedPattern == '/user/:id') {
+          final userId = params.getPathParam('id');
+          return UserDetailPage(userId: userId!);
+        }
+        
+        // /product/:category/:id - 商品详情
+        if (params.matchedPattern == '/product/:category/:id') {
+          final category = params.getPathParam('category');
+          final productId = params.getPathParam('id');
+          final color = params.getQueryParam('color');
+          final size = params.getQueryParam('size');
+          return ProductDetailPage(
+            category: category!,
+            productId: productId!,
+            color: color,
+            size: size,
+          );
+        }
+        
+        // /search?q=keyword&page=1 - 搜索结果
+        if (path == '/search') {
+          final keyword = params.getQueryParam('q');
+          final page = params.getQueryParam('page');
+          return SearchResultPage(
+            keyword: keyword ?? '',
+            page: int.tryParse(page ?? '1') ?? 1,
+          );
+        }
+      }
+      
+      return null;
+    },
   );
 
   // 添加命名路由守卫 - 用于 pushNamed 方式
@@ -99,6 +140,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 创建增强的路由解析器
+    final parser = EnhancedParser(
+      enablePathParams: true,
+      enableQueryParams: true,
+      routeAliases: {
+        '/home': '/',
+      },
+      patterns: [
+        RoutePattern('/user/:id'),
+        RoutePattern('/product/:category/:id'),
+      ],
+    );
+
     return MaterialApp.router(
       title: 'Router Pro - 完整示例',
       debugShowCheckedModeBanner: false,
@@ -107,7 +161,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       routerDelegate: router,
-      routeInformationParser: router.defaultParser(),
+      routeInformationParser: parser, // 使用增强的解析器
     );
   }
 }
@@ -209,6 +263,14 @@ class _HomePageState extends State<HomePage> {
               title: '404错误页面',
               description: '访问不存在的路由',
               onTap: () => router.pushNamed(name: '/not-exist'),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionTitle('🔗 路由解析器'),
+            _buildFeatureCard(
+              icon: Icons.link,
+              title: '增强路由解析器',
+              description: '演示路径参数、查询参数、路由别名等功能',
+              onTap: () => router.push(page: const EnhancedParserDemoPage()),
             ),
             const SizedBox(height: 16),
             _buildSectionTitle('⏱ 生命周期功能'),
@@ -762,6 +824,351 @@ class IntermediatePage extends StatelessWidget {
                 backgroundColor: Colors.orange,
               ),
               child: const Text('返回 SingleInstance 页面'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============ 增强路由解析器演示页 ============
+class EnhancedParserDemoPage extends StatelessWidget {
+  const EnhancedParserDemoPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('增强路由解析器示例'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Card(
+            color: Colors.blue,
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '💡 提示',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '本示例演示 EnhancedParser 的功能：\n'
+                    '• 路径参数解析 (/user/:id)\n'
+                    '• 查询参数解析 (?key=value)\n'
+                    '• 路由别名 (/home -> /)\n'
+                    '• 混合使用',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '路径参数示例',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          _buildExampleCard(
+            title: '用户详情',
+            description: '路径: /user/:id',
+            example: '示例: /user/123',
+            onTap: () {
+              router.pushNamed(name: '/user/123');
+            },
+          ),
+          _buildExampleCard(
+            title: '商品详情',
+            description: '路径: /product/:category/:id',
+            example: '示例: /product/electronics/456',
+            onTap: () {
+              router.pushNamed(name: '/product/electronics/456');
+            },
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '查询参数示例',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          _buildExampleCard(
+            title: '搜索结果',
+            description: '路径: /search?q=keyword&page=1',
+            example: '示例: /search?q=Flutter&page=2',
+            onTap: () {
+              router.pushNamed(name: '/search?q=Flutter&page=2');
+            },
+          ),
+          _buildExampleCard(
+            title: '商品详情（带查询参数）',
+            description: '路径: /product/:category/:id?color=red',
+            example: '示例: /product/electronics/456?color=red&size=large',
+            onTap: () {
+              router.pushNamed(
+                name: '/product/electronics/456?color=red&size=large',
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExampleCard({
+    required String title,
+    required String description,
+    required String example,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(description),
+            const SizedBox(height: 2),
+            Text(
+              example,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+// ============ 用户详情页（路径参数示例）============
+class UserDetailPage extends StatelessWidget {
+  final String userId;
+
+  const UserDetailPage({Key? key, required this.userId}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('用户详情 #$userId'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.person, size: 80, color: Colors.blue),
+            const SizedBox(height: 20),
+            Text(
+              '用户 ID: $userId',
+              style: const TextStyle(fontSize: 24),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '✅ 路径参数已成功解析',
+              style: TextStyle(color: Colors.green, fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '路径: /user/:id',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () => router.pop(),
+              child: const Text('返回'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============ 商品详情页（路径参数 + 查询参数示例）============
+class ProductDetailPage extends StatelessWidget {
+  final String category;
+  final String productId;
+  final String? color;
+  final String? size;
+
+  const ProductDetailPage({
+    Key? key,
+    required this.category,
+    required this.productId,
+    this.color,
+    this.size,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('商品详情 #$productId'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.shopping_bag, size: 80, color: Colors.blue),
+              const SizedBox(height: 20),
+              Text(
+                '商品 ID: $productId',
+                style: const TextStyle(fontSize: 24),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '分类: $category',
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+              if (color != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '颜色: $color',
+                  style: const TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ],
+              if (size != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '尺寸: $size',
+                  style: const TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ],
+              const SizedBox(height: 20),
+              const Text(
+                '✅ 路径参数和查询参数已成功解析',
+                style: TextStyle(color: Colors.green, fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '路径: /product/:category/:id?color=xxx&size=xxx',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => router.pop(),
+                child: const Text('返回'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============ 搜索结果页（查询参数示例）============
+class SearchResultPage extends StatelessWidget {
+  final String keyword;
+  final int page;
+
+  const SearchResultPage({
+    Key? key,
+    required this.keyword,
+    this.page = 1,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('搜索: $keyword'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.search, size: 80, color: Colors.blue),
+            const SizedBox(height: 20),
+            Text(
+              '关键词: $keyword',
+              style: const TextStyle(fontSize: 24),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '页码: $page',
+              style: const TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '✅ 查询参数已成功解析',
+              style: TextStyle(color: Colors.green, fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '路径: /search?q=xxx&page=xxx',
+              style: TextStyle(
+                color: Colors.grey,
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (page > 1)
+                  ElevatedButton(
+                    onPressed: () {
+                      router.pushNamed(
+                        name: '/search?q=$keyword&page=${page - 1}',
+                      );
+                    },
+                    child: const Text('上一页'),
+                  ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    router.pushNamed(
+                      name: '/search?q=$keyword&page=${page + 1}',
+                    );
+                  },
+                  child: const Text('下一页'),
+                ),
+              ],
             ),
           ],
         ),
