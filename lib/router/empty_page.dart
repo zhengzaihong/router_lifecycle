@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:router_pro/router/router_proxy.dart';
 
 ///
-/// create_user: zhengzaihong
+/// author:郑再红
 /// email:1096877329@qq.com
-/// create_date: 2024/1/26
-/// create_time: 11:07
+/// date: 2024/1/26
+/// time: 11:07
 /// describe:
 ///
 class EmptyPage extends StatelessWidget {

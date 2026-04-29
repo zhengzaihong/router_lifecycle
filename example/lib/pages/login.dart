@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:router_pro/router_lib.dart';
 import 'package:router_lifecycle_example/pages/nav_page.dart';
-import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
-import 'package:router_lifecycle_example/router.dart';
+
+import '../main.dart';
 
 class Login extends StatelessWidget {
   const Login({Key? key}) : super(key: key);

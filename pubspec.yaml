@@ -1,6 +1,6 @@
 name: router_pro
-description: router_pro.
-version: 0.1.1
+description: Enhanced Flutter router with lifecycle awareness, launch modes, route guards, and more.
+version: 0.2.0
 homepage: https://github.com/zhengzaihong/router_lifecycle
 
 platforms:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:router_pro/router_lib.dart';
-import 'package:router_lifecycle_example/router.dart';
+
+import '../main.dart';
 
 class TaoBaoPageDetail extends StatefulWidget {
   const TaoBaoPageDetail({Key? key}) : super(key: key);

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'drawer_router.dart';
 
 ///
-/// create_user: zhengzaihong
+/// author:郑再红
 /// email:1096877329@qq.com
-/// create_date: 2025/2/7
-/// create_time: 14:53
+/// date: 2025/2/7
+/// time: 14:53
 /// describe: 用于抽屉含有多个层级页面跳转，
 /// 实现抽屉页面栈 需配合 DrawerRouter 路由使用
 ///

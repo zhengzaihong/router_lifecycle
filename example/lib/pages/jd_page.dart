@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:router_pro/router_lib.dart';
 import 'package:router_lifecycle_example/pages/jd_page_detail.dart';
-import 'package:router_lifecycle_example/router.dart';
+
+import '../main.dart';
 
 class JdPage extends StatelessWidget {
   const JdPage({super.key});

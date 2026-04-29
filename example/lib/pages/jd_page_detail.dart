@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:router_pro/router_lib.dart';
 import 'package:router_lifecycle_example/pages/login.dart';
 import 'package:router_lifecycle_example/pages/taobao_page_detail.dart';
-import 'package:router_lifecycle_example/router.dart';
+
+import '../main.dart';
 
 class JdPageDetail extends StatelessWidget {
   const JdPageDetail({super.key});

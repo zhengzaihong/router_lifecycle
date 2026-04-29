@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 ///
-/// create_user: zhengzaihong
+/// author:郑再红
 /// email:1096877329@qq.com
-/// create_date: 2025/2/6
-/// create_time: 15:26
+/// date: 2025/2/6
+/// time: 15:26
 /// describe: 基于 router_pro 路由
 /// 需配合 DrawerRouterStack 组件使用
 /// 实现抽屉路由栈，使用请先绑定正确的 context

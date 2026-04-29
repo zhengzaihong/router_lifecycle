@@ -5,10 +5,10 @@ import 'custom_parser.dart';
 import 'empty_page.dart';
 
 ///
-/// create_user: zhengzaihong
-/// Email:1096877329@qq.com
-/// create_date: 2022-12-05
-/// create_time: 09:12
+/// author:郑再红
+/// email:1096877329@qq.com
+/// date: 2022-12-05
+/// time: 09:12
 /// describe 基于路由2.0实现界面跳转
 /// 支持1.0中的路由传值，回传取值
 /// exitStyleCallBack 例子：
@@ -37,6 +37,17 @@ typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
 typedef ExitWindowStyle = Future<bool> Function(BuildContext context);
 typedef NavigateToTargetCallBack = void Function(BuildContext context, Widget? page);
 typedef ResultCallBack = void Function(dynamic result);
+typedef RouteGuard = Future<bool> Function(RouteInformation from, RouteInformation to);
+
+/// 路由启动模式
+enum LaunchMode {
+  /// 标准模式：允许同一页面多个实例存在
+  standard,
+  /// 栈顶复用：如果目标页面已在栈顶，则不创建新实例
+  singleTop,
+  /// 单例模式：整个栈中只保留一个实例，如果已存在则移到栈顶
+  singleInstance,
+}
 
 class RouterProxy extends RouterDelegate<RouteInformation>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
@@ -48,6 +59,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   /// 特定页面跳转(非实际跳转)的回调, 例如切换底部Tab
   NavigateToTargetCallBack? _navigateToTargetCallBack;
+
+  /// 路由导航守卫
+  final List<RouteGuard> _routeGuards = [];
 
   /// 静态路由的页面
   Map? pageMap = {};
@@ -66,6 +80,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 通知特定的页面 ValueListenableBuilder
   ValueNotifier<Widget?> currentTargetPage = ValueNotifier(null);
 
+  /// 404错误页面
+  Widget? _notFoundPage;
+
   static final _navigatorKey = GlobalKey<NavigatorState>();
 
   RouterProxy._({
@@ -74,11 +91,13 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     NavigateToTargetCallBack? navigateToTargetCallBack,
     this.pageMap,
     int maxQueue = 30,
+    Widget? notFoundPage,
   }) : super() {
     _exitWindowStyle = exitWindowStyle;
     _routePathCallBack = routePathCallBack;
     _navigateToTargetCallBack = navigateToTargetCallBack;
     _maxQueue = maxQueue;
+    _notFoundPage = notFoundPage;
     pageMap?.forEach((key, value) {
       _pages.add(MaterialPage(child: value));
     });
@@ -90,17 +109,46 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       {RoutePathCallBack? routePathCallBack,
       ExitWindowStyle? exitWindowStyle,
       NavigateToTargetCallBack? navigateToTargetCallBack,
-      Map? pageMap}) {
+      Map? pageMap,
+      Widget? notFoundPage}) {
     _instance ??= RouterProxy._(
         routePathCallBack: routePathCallBack,
         exitWindowStyle: exitWindowStyle,
         navigateToTargetCallBack: navigateToTargetCallBack,
-        pageMap: pageMap);
+        pageMap: pageMap,
+        notFoundPage: notFoundPage);
     return _instance!;
   }
 
   CustomParser defaultParser() {
     return const CustomParser();
+  }
+
+  /// 添加路由守卫
+  /// 守卫会在路由跳转前执行，返回true允许跳转，false拦截跳转
+  void addRouteGuard(RouteGuard guard) {
+    _routeGuards.add(guard);
+  }
+
+  /// 移除路由守卫
+  void removeRouteGuard(RouteGuard guard) {
+    _routeGuards.remove(guard);
+  }
+
+  /// 清空所有路由守卫
+  void clearRouteGuards() {
+    _routeGuards.clear();
+  }
+
+  /// 执行路由守卫检查
+  Future<bool> _checkRouteGuards(RouteInformation from, RouteInformation to) async {
+    for (var guard in _routeGuards) {
+      final result = await guard(from, to);
+      if (!result) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
@@ -185,9 +233,39 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       String? restorationId,
       bool maintainState = true,
       bool fullscreenDialog = false,
-      bool allowSnapshotting = true}) {
+      bool allowSnapshotting = true,
+      LaunchMode launchMode = LaunchMode.standard}) async {
+    
+    // 执行路由守卫检查
+    final from = RouteInformation(uri: Uri.parse(_location ?? '/'));
+    final to = RouteInformation(uri: Uri.parse(name ?? page.runtimeType.toString()));
+    final canNavigate = await _checkRouteGuards(from, to);
+    if (!canNavigate) {
+      return;
+    }
+
     final routeSettings = RouteSettings(
         name: name ?? page.runtimeType.toString(), arguments: arguments);
+    
+    // 处理启动模式
+    switch (launchMode) {
+      case LaunchMode.singleTop:
+        // 如果栈顶已是该页面，则不创建新实例
+        if (_pages.isNotEmpty && 
+            _pages.last.child.runtimeType == page.runtimeType) {
+          return;
+        }
+        break;
+      case LaunchMode.singleInstance:
+        // 如果栈中已存在该页面，移除后重新添加到栈顶
+        _pages.removeWhere(
+            (element) => element.child.runtimeType == page.runtimeType);
+        break;
+      case LaunchMode.standard:
+        // 标准模式，不做特殊处理
+        break;
+    }
+
     final target = MaterialPage(
         child: page,
         name: routeSettings.name,
@@ -270,7 +348,17 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       Object? arguments,
       Widget? emptyPage,
       bool custom = true,
-      String? restorationId}) {
+      String? restorationId,
+      LaunchMode launchMode = LaunchMode.standard}) async {
+    
+    // 执行路由守卫检查
+    final from = RouteInformation(uri: Uri.parse(_location ?? '/'));
+    final to = RouteInformation(uri: Uri.parse(name));
+    final canNavigate = await _checkRouteGuards(from, to);
+    if (!canNavigate) {
+      return;
+    }
+
     var page = pageMap?[name];
     _location = name;
     if (custom && page == null) {
@@ -279,14 +367,15 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     }
     if (page == null) {
       _location = '404';
-      page = emptyPage ?? const EmptyPage();
+      page = emptyPage ?? _notFoundPage ?? const EmptyPage();
     }
     push(
         page: page,
         name: name,
         onResult: onResult,
         arguments: arguments,
-        restorationId: restorationId);
+        restorationId: restorationId,
+        launchMode: launchMode);
   }
 
   /// 回到根页面

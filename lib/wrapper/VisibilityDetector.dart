@@ -1,8 +1,3 @@
-// Copyright 2018 the Dart project authors.
-//
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file or at
-// https://developers.google.com/open-source/licenses/bsd
 
 import 'dart:math' show max, min;
 
@@ -17,13 +12,24 @@ import 'package:flutter/widgets.dart';
 /// A [VisibilityDetector] widget fires a specified callback when the widget
 /// changes visibility.
 ///
-/// Callbacks are not fired immediately on visibility changes.  Instead,
+/// Callbacks are not fired immediately on visibility changes. Instead,
 /// callbacks are deferred and coalesced such that the callback for each
 /// [VisibilityDetector] will be invoked at most once per
 /// [VisibilityDetectorController.updateInterval] (unless forced by
-/// [VisibilityDetectorController.notifyNow]).  Callbacks for *all*
+/// [VisibilityDetectorController.notifyNow]). Callbacks for *all*
 /// [VisibilityDetector] widgets are fired together synchronously between
 /// frames.
+///
+/// Example:
+/// ```dart
+/// VisibilityDetector(
+///   key: Key('my-widget-key'),
+///   onVisibilityChanged: (info) {
+///     print('Widget ${info.key} is ${info.visibleFraction * 100}% visible');
+///   },
+///   child: MyWidget(),
+/// )
+/// ```
 class VisibilityDetector extends SingleChildRenderObjectWidget {
   /// Constructor.
   ///
@@ -35,9 +41,7 @@ class VisibilityDetector extends SingleChildRenderObjectWidget {
     required Key key,
     required Widget child,
     required this.onVisibilityChanged,
-  })  : assert(key != null),
-        assert(child != null),
-        super(key: key, child: child);
+  }) : super(key: key, child: child);
 
   /// The callback to invoke when this widget's visibility changes.
   final VisibilityChangedCallback? onVisibilityChanged;
@@ -60,6 +64,25 @@ class VisibilityDetector extends SingleChildRenderObjectWidget {
   }
 }
 
+/// A sliver version of [VisibilityDetector].
+///
+/// Use this for detecting visibility of widgets in scrollable lists like
+/// [ListView], [GridView], or [CustomScrollView].
+///
+/// Example:
+/// ```dart
+/// CustomScrollView(
+///   slivers: [
+///     SliverVisibilityDetector(
+///       key: Key('my-sliver'),
+///       onVisibilityChanged: (info) {
+///         print('Sliver is ${info.visibleFraction * 100}% visible');
+///       },
+///       sliver: SliverList(...),
+///     ),
+///   ],
+/// )
+/// ```
 class SliverVisibilityDetector extends SingleChildRenderObjectWidget {
   /// Constructor.
   ///
@@ -72,9 +95,7 @@ class SliverVisibilityDetector extends SingleChildRenderObjectWidget {
     required Key key,
     required Widget sliver,
     required this.onVisibilityChanged,
-  })  : assert(key != null),
-        assert(sliver != null),
-        super(key: key, child: sliver);
+  }) : super(key: key, child: sliver);
 
   /// The callback to invoke when this widget's visibility changes.
   final VisibilityChangedCallback? onVisibilityChanged;
@@ -97,22 +118,34 @@ class SliverVisibilityDetector extends SingleChildRenderObjectWidget {
   }
 }
 
+/// Signature for a callback to be invoked when the visibility of a widget changes.
+///
+/// The [VisibilityInfo] parameter contains information about the widget's
+/// visibility state, including its size, visible bounds, and visible fraction.
 typedef VisibilityChangedCallback = void Function(VisibilityInfo info);
 
 /// Data passed to the [VisibilityDetector.onVisibilityChanged] callback.
+///
+/// Contains information about the widget's visibility state including:
+/// - [key]: The unique identifier for the widget
+/// - [size]: The total size of the widget
+/// - [visibleBounds]: The visible portion in local coordinates
+/// - [visibleFraction]: A value from 0.0 (invisible) to 1.0 (fully visible)
 @immutable
 class VisibilityInfo {
   /// Constructor.
   ///
   /// `key` corresponds to the [Key] used to construct the corresponding
-  /// [VisibilityDetector] widget.  Must not be null.
+  /// [VisibilityDetector] widget. Must not be null.
   ///
   /// If `size` or `visibleBounds` are omitted or null, the [VisibilityInfo]
-  /// will be initialized to [Offset.zero] or [Rect.zero] respectively.  This
-  /// will indicate that the corresponding widget is competely hidden.
-  const VisibilityInfo({required this.key, Size? size, Rect? visibleBounds})
-      : assert(key != null),
-        size = size ?? Size.zero,
+  /// will be initialized to [Size.zero] or [Rect.zero] respectively. This
+  /// will indicate that the corresponding widget is completely hidden.
+  const VisibilityInfo({
+    required this.key,
+    Size? size,
+    Rect? visibleBounds,
+  })  : size = size ?? Size.zero,
         visibleBounds = visibleBounds ?? Rect.zero;
 
   /// Constructs a [VisibilityInfo] from widget bounds and a corresponding
@@ -120,21 +153,25 @@ class VisibilityInfo {
   ///
   /// [widgetBounds] and [clipRect] are expected to be in the same coordinate
   /// system.
+  ///
+  /// This factory is typically used internally by the visibility detection
+  /// system to compute visibility based on the widget's position and any
+  /// clipping applied by ancestor widgets.
   factory VisibilityInfo.fromRects({
     required Key key,
     required Rect widgetBounds,
     required Rect clipRect,
   }) {
-    assert(widgetBounds != null);
-    assert(clipRect != null);
-
     // Compute the intersection in the widget's local coordinates.
     final visibleBounds = widgetBounds.overlaps(clipRect)
         ? widgetBounds.intersect(clipRect).shift(-widgetBounds.topLeft)
         : Rect.zero;
 
     return VisibilityInfo(
-        key: key, size: widgetBounds.size, visibleBounds: visibleBounds);
+      key: key,
+      size: widgetBounds.size,
+      visibleBounds: visibleBounds,
+    );
   }
 
   /// The key for the corresponding [VisibilityDetector] widget.
@@ -179,6 +216,18 @@ class VisibilityInfo {
     return visibleFraction;
   }
 
+  /// Returns true if the widget is completely invisible (0% visible).
+  bool get isInvisible => visibleFraction == 0;
+
+  /// Returns true if the widget is fully visible (100% visible).
+  bool get isFullyVisible => visibleFraction == 1;
+
+  /// Returns true if the widget is partially visible (between 0% and 100%).
+  bool get isPartiallyVisible => visibleFraction > 0 && visibleFraction < 1;
+
+  /// Returns true if the widget is at least partially visible (> 0%).
+  bool get isVisible => visibleFraction > 0;
+
   /// Returns true if the specified [VisibilityInfo] object has equivalent
   /// visibility to this one.
   bool matchesVisibility(VisibilityInfo info) {
@@ -186,13 +235,24 @@ class VisibilityInfo {
     // from whether two [VisibilityInfo] objects are sufficiently similar
     // that we don't need to fire callbacks for both.  This could be pertinent
     // if other properties are added.
-    assert(info != null);
     return size == info.size && visibleBounds == info.visibleBounds;
   }
 
   @override
+  int get hashCode => Object.hash(key, size, visibleBounds);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is VisibilityInfo &&
+        other.key == key &&
+        other.size == size &&
+        other.visibleBounds == visibleBounds;
+  }
+
+  @override
   String toString() {
-    return 'VisibilityInfo(size: $size visibleBounds: $visibleBounds)';
+    return 'VisibilityInfo(key: $key, size: $size, visibleBounds: $visibleBounds, visibleFraction: ${visibleFraction.toStringAsFixed(2)})';
   }
 }
 
@@ -202,7 +262,6 @@ const _kDefaultTolerance = 0.01;
 
 /// Computes the area of a rectangle of the specified dimensions.
 double _area(Size size) {
-  assert(size != null);
   assert(size.width >= 0);
   assert(size.height >= 0);
   return size.width * size.height;
@@ -226,8 +285,7 @@ class RenderVisibilityDetector extends RenderProxyBox {
     RenderBox? child,
     required this.key,
     required VisibilityChangedCallback? onVisibilityChanged,
-  })  : assert(key != null),
-        _onVisibilityChanged = onVisibilityChanged,
+  })  : _onVisibilityChanged = onVisibilityChanged,
         super(child);
 
   /// The key for the corresponding [VisibilityDetector] widget.
@@ -283,18 +341,18 @@ Iterable<Layer> _getLayerChain(Layer start) {
 }
 
 /// Returns the accumulated transform from the specified sequence of [Layer]s.
-/// The sequence must be in [parent, child] order.  The sequence must not be
+/// The sequence must be in [parent, child] order. The sequence must not be
 /// null.
 Matrix4 _accumulateTransforms(Iterable<Layer> layerChain) {
-  assert(layerChain != null);
-
   final transform = Matrix4.identity();
-  if (layerChain.isNotEmpty) {
-    var parent = layerChain.first;
-    for (final child in layerChain.skip(1)) {
-      (parent as ContainerLayer).applyTransform(child, transform);
-      parent = child;
-    }
+  if (layerChain.isEmpty) {
+    return transform;
+  }
+
+  var parent = layerChain.first;
+  for (final child in layerChain.skip(1)) {
+    (parent as ContainerLayer).applyTransform(child, transform);
+    parent = child;
   }
   return transform;
 }
@@ -319,16 +377,13 @@ Rect _localRectToGlobal(Layer layer, Rect localRect) {
 /// being added to the [SceneBuilder].
 class VisibilityDetectorLayer extends ContainerLayer {
   /// Constructor.  See the corresponding properties for parameter details.
-  VisibilityDetectorLayer(
-      {required this.key,
-        required this.widgetOffset,
-        required this.widgetSize,
-        required this.paintOffset,
-        required this.onVisibilityChanged})
-      : assert(key != null),
-        assert(paintOffset != null),
-        assert(widgetSize != null),
-        assert(onVisibilityChanged != null);
+  VisibilityDetectorLayer({
+    required this.key,
+    required this.widgetOffset,
+    required this.widgetSize,
+    required this.paintOffset,
+    required this.onVisibilityChanged,
+  });
 
   /// Timer used by [_scheduleUpdate].
   static Timer? _timer;
@@ -390,9 +445,9 @@ class VisibilityDetectorLayer extends ContainerLayer {
       if (parentLayer is ClipRectLayer) {
         curClipRect = parentLayer.clipRect;
       } else if (parentLayer is ClipRRectLayer) {
-        curClipRect = parentLayer.clipRRect!.outerRect;
+        curClipRect = parentLayer.clipRRect?.outerRect;
       } else if (parentLayer is ClipPathLayer) {
-        curClipRect = parentLayer.clipPath!.getBounds();
+        curClipRect = parentLayer.clipPath?.getBounds();
       }
 
       if (curClipRect != null) {
@@ -497,8 +552,6 @@ class VisibilityDetectorLayer extends ContainerLayer {
   /// Invokes the visibility callback if [VisibilityInfo] hasn't meaningfully
   /// changed since the last time we invoked it.
   void _fireCallback(VisibilityInfo info) {
-    assert(info != null);
-
     final oldInfo = _lastVisibility[key];
     final visible = !info.visibleBounds.isEmpty;
 
@@ -523,10 +576,7 @@ class VisibilityDetectorLayer extends ContainerLayer {
 
   /// See [Layer.addToScene].
   @override
-  void addToScene(ui.SceneBuilder builder, [Offset layerOffset = Offset.zero]) {
-    // TODO(goderbauer): Remove unused layerOffset parameter once
-    //     https://github.com/flutter/flutter/pull/91753 is in stable.
-    assert(layerOffset == Offset.zero);
+  void addToScene(ui.SceneBuilder builder) {
     _scheduleUpdate();
     super.addToScene(builder);
   }
@@ -650,7 +700,11 @@ class RenderSliverVisibilityDetector extends RenderProxySliver {
 /// A [VisibilityDetectorController] is a singleton object that can perform
 /// actions and change configuration for all [VisibilityDetector] widgets.
 class VisibilityDetectorController {
-  static final _instance = VisibilityDetectorController();
+  VisibilityDetectorController._();
+
+  static final _instance = VisibilityDetectorController._();
+
+  /// Gets the singleton instance of [VisibilityDetectorController].
   static VisibilityDetectorController get instance => _instance;
 
   /// The minimum amount of time to wait between firing batches of visibility
@@ -661,12 +715,20 @@ class VisibilityDetectorController {
   ///
   /// Changing [updateInterval] will not affect any pending callbacks.  Clients
   /// should call [notifyNow] explicitly to flush them if desired.
+  ///
+  /// Default is 500 milliseconds.
   Duration updateInterval = const Duration(milliseconds: 500);
 
   /// Forces firing all pending visibility callbacks immediately.
   ///
   /// This might be desirable just prior to tearing down the widget tree (such
   /// as when switching views or when exiting the application).
+  ///
+  /// Example:
+  /// ```dart
+  /// // Before disposing a page with visibility detectors
+  /// VisibilityDetectorController.instance.notifyNow();
+  /// ```
   void notifyNow() => VisibilityDetectorLayer.notifyNow();
 
   /// Forgets any pending visibility callbacks for the [VisibilityDetector] with
@@ -676,6 +738,12 @@ class VisibilityDetectorController {
   ///
   /// This method can be used to cancel timers after the [VisibilityDetector]
   /// has been detached to avoid pending timers in tests.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Clean up after a specific widget
+  /// VisibilityDetectorController.instance.forget(Key('my-widget'));
+  /// ```
   void forget(Key key) => VisibilityDetectorLayer.forget(key);
 
   /// Returns the last known bounds for the [VisibilityDetector] with the given
@@ -683,5 +751,14 @@ class VisibilityDetectorController {
   ///
   /// Returns null if the specified [VisibilityDetector] is not visible or is
   /// not found.
+  ///
+  /// Example:
+  /// ```dart
+  /// final bounds = VisibilityDetectorController.instance
+  ///     .widgetBoundsFor(Key('my-widget'));
+  /// if (bounds != null) {
+  ///   print('Widget is at: ${bounds.topLeft}');
+  /// }
+  /// ```
   Rect? widgetBoundsFor(Key key) => VisibilityDetectorLayer.widgetBounds[key];
 }
