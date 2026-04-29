@@ -105,7 +105,7 @@ router.pushNamed(
 
 ### Route Launch Modes
 
-Supports three launch modes, similar to Android Activity launch modes:
+Supports three launch modes, fully simulating Android Activity launch mode behavior:
 
 ```dart
 // 1. Standard mode (default) - Allows multiple instances of the same page
@@ -114,17 +114,105 @@ router.push(
   launchMode: LaunchMode.standard,
 );
 
-// 2. Single Top - If the target page is already at the top of the stack, no new instance is created
+// 2. Single Top - If the target page is already at the top, updates parameters instead of creating new instance
+// Similar to Android's singleTop mode, triggers page rebuild (like onNewIntent)
 router.push(
-  page: const DetailPage(),
+  page: DetailPage(title: 'New Title'),
   launchMode: LaunchMode.singleTop,
 );
 
-// 3. Single Instance - Only one instance in the entire stack, moves to top if already exists
+// 3. Single Instance - Only one instance in the entire stack
+// If exists, clears all pages above it and updates parameters (like Android's singleInstance + onNewIntent)
 router.push(
-  page: const DetailPage(),
+  page: ShoppingCartPage(itemCount: 5),
   launchMode: LaunchMode.singleInstance,
 );
+```
+
+#### Comparison of Three Modes
+
+| Mode | At Stack Top | Elsewhere in Stack | Update Params | Clear Above | Typical Use Cases |
+|------|-------------|-------------------|---------------|-------------|-------------------|
+| **Standard** | Create new | Create new | ❌ | ❌ | Detail pages, Forms |
+| **SingleTop** | Update & rebuild | Create new | ✅ | ❌ | Search, Notifications |
+| **SingleInstance** | Update & rebuild | Clear above & update | ✅ | ✅ | Cart, Home, Player |
+
+#### Detailed Behavior
+
+**Scenario 1: Stack A -> B -> C, launch C again**
+
+| Mode | Result Stack | Description |
+|------|-------------|-------------|
+| Standard | A -> B -> C -> C | Create new C instance |
+| SingleTop | A -> B -> C (updated) | C at top, update params |
+| SingleInstance | A -> B -> C (updated) | C at top, update params |
+
+**Scenario 2: Stack A -> B -> C -> D, launch C again**
+
+| Mode | Result Stack | Description |
+|------|-------------|-------------|
+| Standard | A -> B -> C -> D -> C | Create new C instance |
+| SingleTop | A -> B -> C -> D -> C | C not at top, create new |
+| SingleInstance | A -> B -> C (updated) | Clear D, update C |
+
+**Scenario 3: Stack A -> B -> C -> D -> E, launch B again**
+
+| Mode | Result Stack | Description |
+|------|-------------|-------------|
+| Standard | A -> B -> C -> D -> E -> B | Create new B instance |
+| SingleTop | A -> B -> C -> D -> E -> B | B not at top, create new |
+| SingleInstance | A -> B (updated) | Clear C, D, E, update B |
+
+#### Mode Details
+
+**Standard Mode**
+- Default mode, creates new instance each time
+- Allows multiple instances of the same page
+- Use cases: Detail pages, forms, search results, chat pages
+
+**SingleTop Mode**
+- If target page is at stack top, updates parameters and rebuilds (like Android `onNewIntent`)
+- If target page is not at top, creates new instance
+- Use cases: Search pages, notification clicks, deep links, scan result pages
+- Note: Page will rebuild, internal state will be lost
+
+**SingleInstance Mode**
+- Globally unique instance, only one instance of the page in entire app
+- If page exists, clears all pages above it and updates with new parameters
+- Use cases: Shopping cart, home page, player, notification center, settings
+- Note: Clears pages above, may affect user navigation experience
+
+#### Usage Examples
+
+```dart
+// Example 1: Shopping Cart (SingleInstance)
+void addToCart(Product product) {
+  cartItems.add(product);
+  router.push(
+    page: ShoppingCartPage(itemCount: cartItems.length, items: cartItems),
+    launchMode: LaunchMode.singleInstance,
+  );
+  // Returns to the same cart from any page
+  // Clears all pages above the cart
+}
+
+// Example 2: Search Page (SingleTop)
+void search(String keyword) {
+  router.push(
+    page: SearchResultPage(keyword: keyword),
+    launchMode: LaunchMode.singleTop,
+  );
+  // Multiple searches update results instead of creating multiple pages
+}
+
+// Example 3: Product Detail (Standard)
+void viewProduct(String productId) {
+  router.push(
+    page: ProductDetailPage(productId: productId),
+    launchMode: LaunchMode.standard,
+  );
+  // Users can open multiple product details for comparison
+}
 ```
 ### Page close & return
 
@@ -164,7 +252,9 @@ router.showAppBottomSheet(builder: (context){
 
 ### Route Navigation Guards
 
-Support route interception for permission verification, login checks, etc.:
+Support two types of route interception for permission verification, login checks, etc.:
+
+#### Method 1: Named Route Guard (for pushNamed)
 
 ```dart
 // Add route guard
@@ -181,11 +271,56 @@ router.addRouteGuard((from, to) async {
   return true; // Return true to allow navigation
 });
 
-// Remove route guard
-router.removeRouteGuard(guard);
+// Use named route navigation
+router.pushNamed(name: '/profile');
+```
 
-// Clear all route guards
+#### Method 2: Page Type Guard (for push(page: xxx))
+
+```dart
+// Add page type guard
+router.addPageTypeGuard((fromPageType, toPageType) async {
+  // Page types that require login
+  final protectedPageTypes = [
+    ProfilePage,
+    SettingsPage,
+    AutoPlayVideoExample,
+  ];
+  
+  final isLoggedIn = await checkLoginStatus();
+  
+  if (protectedPageTypes.contains(toPageType) && !isLoggedIn) {
+    // Intercept navigation, redirect to login page
+    router.pushNamed(name: '/login');
+    return false; // Return false to block navigation
+  }
+  return true; // Return true to allow navigation
+});
+
+// Use page instance navigation
+router.push(page: ProfilePage());
+```
+
+#### Method 3: Hybrid Approach (supports both guards)
+
+```dart
+// Add name parameter to push method to trigger both guards
+router.push(
+  page: ProfilePage(),
+  name: '/profile',  // Add name parameter for route guard recognition
+);
+```
+
+#### Guard Management
+
+```dart
+// Remove guards
+router.removeRouteGuard(guard);
+router.removePageTypeGuard(pageTypeGuard);
+
+// Clear all guards
 router.clearRouteGuards();
+router.clearPageTypeGuards();
 ```
 
 ### 404 Error Page

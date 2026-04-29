@@ -20,6 +20,9 @@ void main() {
 // 全局路由实例
 late RouterProxy router;
 
+// 模拟登录状态
+bool _isLoggedIn = false;
+
 void initRouter() {
   router = RouterProxy.getInstance(
     pageMap: {
@@ -36,23 +39,33 @@ void initRouter() {
     exitWindowStyle: _confirmExit,
   );
 
-  // 添加路由守卫 - 需要登录才能访问某些页面
+  // 添加命名路由守卫 - 用于 pushNamed 方式
   router.addRouteGuard((from, to) async {
-    final protectedRoutes = ['/profile',];
-    final isLoggedIn = await _checkLoginStatus();
-
-    if (protectedRoutes.contains(to.uri.toString()) && !isLoggedIn) {
-      // 拦截跳转，跳转到登录页
+    final protectedRoutes = ['/profile'];
+    
+    if (protectedRoutes.contains(to.uri.toString()) && !_isLoggedIn) {
+      debugPrint('路由守卫: 拦截命名路由 ${to.uri}，需要登录');
       router.pushNamed(name: '/login');
       return false;
     }
     return true;
   });
-}
 
-Future<bool> _checkLoginStatus() async {
-  // 模拟检查登录状态
-  return false; // 返回false表示未登录
+  // 添加页面类型守卫 - 用于 push(page: xxx) 方式
+  router.addPageTypeGuard((fromPageType, toPageType) async {
+    final protectedPageTypes = [
+      VideoPlayerDemoPage,
+      ProfileDetailPage,
+    ];
+    
+    if (protectedPageTypes.contains(toPageType) && !_isLoggedIn) {
+      debugPrint('页面类型守卫: 拦截页面类型 $toPageType，需要登录');
+      // 这里不能直接 push LoginPage，因为会触发循环，所以用 pushNamed
+      router.pushNamed(name: '/login');
+      return false;
+    }
+    return true;
+  });
 }
 
 Future<bool> _confirmExit(BuildContext context) async {
@@ -76,6 +89,11 @@ Future<bool> _confirmExit(BuildContext context) async {
   return result ?? true;
 }
 
+// 切换登录状态的辅助函数
+void toggleLoginStatus() {
+  _isLoggedIn = !_isLoggedIn;
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -95,9 +113,14 @@ class MyApp extends StatelessWidget {
 }
 
 // ============ 首页 ============
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return LifeCycle(
@@ -109,10 +132,53 @@ class HomePage extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Router Pro 完整示例'),
           centerTitle: true,
+          actions: [
+            // 登录状态切换按钮
+            IconButton(
+              icon: Icon(_isLoggedIn ? Icons.logout : Icons.login),
+              tooltip: _isLoggedIn ? '退出登录' : '登录',
+              onPressed: () {
+                setState(() {
+                  toggleLoginStatus();
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_isLoggedIn ? '已登录' : '已退出登录'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // 登录状态显示
+            Card(
+              color: _isLoggedIn ? Colors.green.shade50 : Colors.orange.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isLoggedIn ? Icons.check_circle : Icons.info,
+                      color: _isLoggedIn ? Colors.green : Colors.orange,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _isLoggedIn ? '当前状态：已登录' : '当前状态：未登录',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
             _buildSectionTitle('🚀 路由功能'),
             _buildFeatureCard(
               icon: Icons.layers,
@@ -122,9 +188,15 @@ class HomePage extends StatelessWidget {
             ),
             _buildFeatureCard(
               icon: Icons.security,
-              title: '路由守卫',
-              description: '演示路由拦截和权限验证',
+              title: '路由守卫（命名路由）',
+              description: '演示命名路由拦截和权限验证',
               onTap: () => router.pushNamed(name: '/profile'),
+            ),
+            _buildFeatureCard(
+              icon: Icons.shield,
+              title: '页面类型守卫',
+              description: '演示 push(page: xxx) 方式的路由守卫',
+              onTap: () => router.push(page: const ProfileDetailPage()),
             ),
             _buildFeatureCard(
               icon: Icons.swap_calls,
@@ -143,7 +215,7 @@ class HomePage extends StatelessWidget {
             _buildFeatureCard(
               icon: Icons.video_library,
               title: '视频播放生命周期',
-              description: '演示视频播放的生命周期管理',
+              description: '演示视频播放的生命周期管理（需要登录）',
               onTap: () => _showVideoLifecycleDemo(context),
             ),
             const SizedBox(height: 16),
@@ -240,11 +312,11 @@ class HomePage extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.vertical_align_top),
               title: const Text('SingleTop 栈顶复用'),
-              subtitle: const Text('栈顶已存在则不创建'),
+              subtitle: const Text('栈顶已存在则更新参数（类似Android onNewIntent）'),
               onTap: () {
                 Navigator.pop(context);
                 router.push(
-                  page: const DetailPage(title: '栈顶复用'),
+                  page: DetailPage(title: '栈顶复用 - ${DateTime.now().second}秒'),
                   launchMode: LaunchMode.singleTop,
                 );
               },
@@ -252,11 +324,11 @@ class HomePage extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.filter_1),
               title: const Text('SingleInstance 单例模式'),
-              subtitle: const Text('全栈唯一实例'),
+              subtitle: const Text('全栈唯一实例，清除上层页面'),
               onTap: () {
                 Navigator.pop(context);
                 router.push(
-                  page: const DetailPage(title: '单例模式'),
+                  page: SingleInstanceDemoPage(timestamp: DateTime.now().toString()),
                   launchMode: LaunchMode.singleInstance,
                 );
               },
@@ -271,9 +343,7 @@ class HomePage extends StatelessWidget {
     router.pushNamed(
       name: '/settings',
       onResult: (value) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('收到返回值: $value')),
-        );
+        router.showAppSnackBar(message:value);
       },
     );
   }
@@ -507,6 +577,193 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============ 个人详情页（用于演示页面类型守卫）============
+class ProfileDetailPage extends StatelessWidget {
+  const ProfileDetailPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('个人详情'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.person, size: 80, color: Colors.blue),
+            const SizedBox(height: 20),
+            const Text(
+              '个人详情页面',
+              style: TextStyle(fontSize: 24),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '此页面通过页面类型守卫保护',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '使用 router.push(page: ProfileDetailPage()) 跳转',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============ SingleInstance 演示页 ============
+class SingleInstanceDemoPage extends StatelessWidget {
+  final String timestamp;
+  
+  const SingleInstanceDemoPage({
+    Key? key,
+    required this.timestamp,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('SingleInstance 演示'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.filter_1,
+                size: 80,
+                color: Colors.blue,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'SingleInstance 模式',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '创建时间: $timestamp',
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              const Text(
+                '特点：',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '• 全局唯一实例\n'
+                '• 已存在时更新参数\n'
+                '• 清除该页面上面的所有页面\n'
+                '• 适用于购物车、首页等场景',
+                style: TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+              ElevatedButton.icon(
+                onPressed: () {
+                  router.push(page: const IntermediatePage());
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('添加中间页面'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                onPressed: () {
+                  router.push(
+                    page: SingleInstanceDemoPage(
+                      timestamp: DateTime.now().toString(),
+                    ),
+                    launchMode: LaunchMode.singleInstance,
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('再次启动（会清除中间页面）'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============ 中间页面（用于演示 SingleInstance 清除效果）============
+class IntermediatePage extends StatelessWidget {
+  const IntermediatePage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('中间页面'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.layers, size: 80, color: Colors.green),
+            const SizedBox(height: 20),
+            const Text(
+              '这是一个中间页面',
+              style: TextStyle(fontSize: 20),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '当再次启动 SingleInstance 页面时\n这个页面会被清除',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                router.push(page: const IntermediatePage());
+              },
+              child: const Text('再添加一个中间页面'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                router.push(
+                  page: SingleInstanceDemoPage(
+                    timestamp: DateTime.now().toString(),
+                  ),
+                  launchMode: LaunchMode.singleInstance,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+              ),
+              child: const Text('返回 SingleInstance 页面'),
+            ),
+          ],
         ),
       ),
     );

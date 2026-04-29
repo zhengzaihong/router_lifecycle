@@ -11,33 +11,84 @@ import 'empty_page.dart';
 /// time: 09:12
 /// describe 基于路由2.0实现界面跳转
 /// 支持1.0中的路由传值，回传取值
-/// exitStyleCallBack 例子：
-///   Future<bool> _confirmExit(BuildContext context) async {
-///     final result = await showDialog<bool>(
-///         context: context,
-///         builder: (context) {
-///           return AlertDialog(
-///             content: const Text('确定要退出App吗?'),
-///             actions: [
-///               TextButton(
-///                 child: const Text('取消'),
-///                 onPressed: () => Navigator.pop(context, true),
-///               ),
-///               TextButton(
-///                 child: const Text('确定'),
-///                 onPressed: () => Navigator.pop(context, false),
-///               ),
-///             ],
-///           );
-///         });
-///     return result ?? true;
-///   }
 ///
+///
+// exitWindowStyle 例子：
+
+//   Future<bool> _confirmExit(BuildContext context) async {
+//     final result = await showDialog<bool>(
+//         context: context,
+//         builder: (context) {
+//           return AlertDialog(
+//             content: const Text('确定要退出App吗?'),
+//             actions: [
+//               TextButton(
+//                 child: const Text('取消'),
+//                 onPressed: () => Navigator.pop(context, true),
+//               ),
+//               TextButton(
+//                 child: const Text('确定'),
+//                 onPressed: () => Navigator.pop(context, false),
+//               ),
+//             ],
+//           );
+//         });
+//     return result ?? true;
+//   }
+
+
+// eg:
+// void initRouter() {
+//   router = RouterProxy.getInstance(
+//     pageMap: {
+//       '/': const HomePage(),
+//       '/login': const LoginPage(),
+//       '/profile': const ProfilePage(),
+//       '/settings': const SettingsPage(),
+//       '/visibility': const VisibilityExamplePage(),
+//       '/lazy-image': const LazyImageExample(),
+//       '/auto-video': const AutoPlayVideoExample(),
+//       '/exposure': const ExposureTrackingExample(),
+//     },
+//     notFoundPage: const NotFoundPage(),
+//     exitWindowStyle: _confirmExit,
+//   );
+//
+//   // 添加命名路由守卫 - 用于 pushNamed 方式
+//   router.addRouteGuard((from, to) async {
+//     final protectedRoutes = ['/profile'];
+//
+//     if (protectedRoutes.contains(to.uri.toString()) && !_isLoggedIn) {
+//       debugPrint('路由守卫: 拦截命名路由 ${to.uri}，需要登录');
+//       router.pushNamed(name: '/login');
+//       return false;
+//     }
+//     return true;
+//   });
+//
+//   // 添加页面类型守卫 - 用于 push(page: xxx) 方式
+//   router.addPageTypeGuard((fromPageType, toPageType) async {
+//     final protectedPageTypes = [
+//       VideoPlayerDemoPage,
+//       ProfileDetailPage,
+//     ];
+//
+//     if (protectedPageTypes.contains(toPageType) && !_isLoggedIn) {
+//       debugPrint('页面类型守卫: 拦截页面类型 $toPageType，需要登录');
+//       // 这里不能直接 push LoginPage，因为会触发循环，所以用 pushNamed
+//       router.pushNamed(name: '/login');
+//       return false;
+//     }
+//     return true;
+//   });
+// }
+
 typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
 typedef ExitWindowStyle = Future<bool> Function(BuildContext context);
 typedef NavigateToTargetCallBack = void Function(BuildContext context, Widget? page);
 typedef ResultCallBack = void Function(dynamic result);
 typedef RouteGuard = Future<bool> Function(RouteInformation from, RouteInformation to);
+typedef PageTypeGuard = Future<bool> Function(Type? fromPageType, Type toPageType);
 
 /// 路由启动模式
 enum LaunchMode {
@@ -62,6 +113,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   /// 路由导航守卫
   final List<RouteGuard> _routeGuards = [];
+  
+  /// 页面类型导航守卫
+  final List<PageTypeGuard> _pageTypeGuards = [];
 
   /// 静态路由的页面
   Map? pageMap = {};
@@ -139,11 +193,39 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   void clearRouteGuards() {
     _routeGuards.clear();
   }
+  
+  /// 添加页面类型守卫
+  /// 用于 push(page: xxx) 方式的导航守卫
+  /// 守卫会在路由跳转前执行，返回true允许跳转，false拦截跳转
+  void addPageTypeGuard(PageTypeGuard guard) {
+    _pageTypeGuards.add(guard);
+  }
+
+  /// 移除页面类型守卫
+  void removePageTypeGuard(PageTypeGuard guard) {
+    _pageTypeGuards.remove(guard);
+  }
+
+  /// 清空所有页面类型守卫
+  void clearPageTypeGuards() {
+    _pageTypeGuards.clear();
+  }
 
   /// 执行路由守卫检查
   Future<bool> _checkRouteGuards(RouteInformation from, RouteInformation to) async {
     for (var guard in _routeGuards) {
       final result = await guard(from, to);
+      if (!result) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  /// 执行页面类型守卫检查
+  Future<bool> _checkPageTypeGuards(Type? fromPageType, Type toPageType) async {
+    for (var guard in _pageTypeGuards) {
+      final result = await guard(fromPageType, toPageType);
       if (!result) {
         return false;
       }
@@ -236,11 +318,19 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       bool allowSnapshotting = true,
       LaunchMode launchMode = LaunchMode.standard}) async {
     
-    // 执行路由守卫检查
+    // 执行路由守卫检查（基于路由名称）
     final from = RouteInformation(uri: Uri.parse(_location ?? '/'));
     final to = RouteInformation(uri: Uri.parse(name ?? page.runtimeType.toString()));
     final canNavigate = await _checkRouteGuards(from, to);
     if (!canNavigate) {
+      return;
+    }
+    
+    // 执行页面类型守卫检查
+    final fromPageType = _pages.isNotEmpty ? _pages.last.child.runtimeType : null;
+    final toPageType = page.runtimeType;
+    final canNavigateByType = await _checkPageTypeGuards(fromPageType, toPageType);
+    if (!canNavigateByType) {
       return;
     }
 
@@ -250,16 +340,56 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     // 处理启动模式
     switch (launchMode) {
       case LaunchMode.singleTop:
-        // 如果栈顶已是该页面，则不创建新实例
+        // 如果栈顶已是该页面类型，则更新参数而不创建新实例（类似Android的onNewIntent）
         if (_pages.isNotEmpty && 
             _pages.last.child.runtimeType == page.runtimeType) {
+          // 更新栈顶页面的参数
+          final lastPage = _pages.removeLast();
+          _result.remove(lastPage.hashCode);
+          
+          final updatedPage = MaterialPage(
+              child: page,
+              name: routeSettings.name,
+              arguments: routeSettings.arguments,
+              restorationId: restorationId,
+              maintainState: maintainState,
+              fullscreenDialog: fullscreenDialog,
+              allowSnapshotting: allowSnapshotting);
+          _pages.add(updatedPage);
+          _result[updatedPage.hashCode] = onResult;
+          notify();
           return;
         }
         break;
       case LaunchMode.singleInstance:
-        // 如果栈中已存在该页面，移除后重新添加到栈顶
-        _pages.removeWhere(
+        // 如果栈中已存在该页面，清除它上面的所有页面，并更新参数（类似Android的onNewIntent）
+        final existingIndex = _pages.indexWhere(
             (element) => element.child.runtimeType == page.runtimeType);
+        
+        if (existingIndex != -1) {
+          // 找到已存在的页面
+          // 1. 清除该页面上面的所有页面
+          final pagesToRemove = _pages.sublist(existingIndex);
+          for (var pageToRemove in pagesToRemove) {
+            _result.remove(pageToRemove.hashCode);
+          }
+          _pages.removeRange(existingIndex, _pages.length);
+          
+          // 2. 用新参数重新创建该页面（类似onNewIntent）
+          final updatedPage = MaterialPage(
+              child: page,
+              name: routeSettings.name,
+              arguments: routeSettings.arguments,
+              restorationId: restorationId,
+              maintainState: maintainState,
+              fullscreenDialog: fullscreenDialog,
+              allowSnapshotting: allowSnapshotting);
+          _pages.add(updatedPage);
+          _result[updatedPage.hashCode] = onResult;
+          notify();
+          return;
+        }
+        // 如果不存在，继续执行后面的代码创建新实例
         break;
       case LaunchMode.standard:
         // 标准模式，不做特殊处理

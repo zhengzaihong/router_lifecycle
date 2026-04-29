@@ -105,7 +105,7 @@ router.pushNamed(
 
 ### 路由启动模式
 
-支持三种启动模式，类似Android的Activity启动模式：
+支持三种启动模式，完全模拟 Android Activity 的启动模式行为：
 
 ```dart
 // 1. 标准模式（默认）- 允许同一页面多个实例存在
@@ -114,17 +114,105 @@ router.push(
   launchMode: LaunchMode.standard,
 );
 
-// 2. 栈顶复用 - 如果目标页面已在栈顶，则不创建新实例
+// 2. 栈顶复用 - 如果目标页面已在栈顶，则更新参数而不创建新实例
+// 类似 Android 的 singleTop 模式，会触发页面重建（类似 onNewIntent）
 router.push(
-  page: const DetailPage(),
+  page: DetailPage(title: '新标题'),
   launchMode: LaunchMode.singleTop,
 );
 
-// 3. 单例模式 - 整个栈中只保留一个实例，如果已存在则移到栈顶
+// 3. 单例模式 - 整个栈中只保留一个实例
+// 如果已存在，清除它上面的所有页面，并更新参数（类似 Android 的 singleInstance + onNewIntent）
 router.push(
-  page: const DetailPage(),
+  page: ShoppingCartPage(itemCount: 5),
   launchMode: LaunchMode.singleInstance,
 );
+```
+
+#### 三种模式对比
+
+| 模式 | 栈顶已存在 | 栈中其他位置存在 | 参数更新 | 清除上层页面 | 典型场景 |
+|------|-----------|----------------|---------|------------|---------|
+| **Standard** | 创建新实例 | 创建新实例 | ❌ | ❌ | 详情页、表单页 |
+| **SingleTop** | 更新参数并重建 | 创建新实例 | ✅ | ❌ | 搜索页、通知点击 |
+| **SingleInstance** | 更新参数并重建 | 清除上层，更新参数 | ✅ | ✅ | 购物车、首页、播放器 |
+
+#### 详细行为说明
+
+**场景1：页面栈 A -> B -> C，再次启动 C**
+
+| 模式 | 结果栈 | 说明 |
+|------|--------|------|
+| Standard | A -> B -> C -> C | 创建新的 C 实例 |
+| SingleTop | A -> B -> C (更新) | C 在栈顶，更新参数 |
+| SingleInstance | A -> B -> C (更新) | C 在栈顶，更新参数 |
+
+**场景2：页面栈 A -> B -> C -> D，再次启动 C**
+
+| 模式 | 结果栈 | 说明 |
+|------|--------|------|
+| Standard | A -> B -> C -> D -> C | 创建新的 C 实例 |
+| SingleTop | A -> B -> C -> D -> C | C 不在栈顶，创建新实例 |
+| SingleInstance | A -> B -> C (更新) | 清除 D，更新 C |
+
+**场景3：页面栈 A -> B -> C -> D -> E，再次启动 B**
+
+| 模式 | 结果栈 | 说明 |
+|------|--------|------|
+| Standard | A -> B -> C -> D -> E -> B | 创建新的 B 实例 |
+| SingleTop | A -> B -> C -> D -> E -> B | B 不在栈顶，创建新实例 |
+| SingleInstance | A -> B (更新) | 清除 C、D、E，更新 B |
+
+#### 各模式详细说明
+
+**Standard 模式（标准模式）**
+- 默认模式，每次跳转都创建新实例
+- 允许同一页面多个实例存在
+- 适用场景：详情页、表单页、搜索结果页、聊天页面
+
+**SingleTop 模式（栈顶复用）**
+- 如果目标页面已在栈顶，更新参数并重建（类似 Android `onNewIntent`）
+- 如果目标页面不在栈顶，创建新实例
+- 适用场景：搜索页面、通知点击、深度链接、扫码结果页
+- 注意：页面会重建，内部状态会丢失
+
+**SingleInstance 模式（单例模式）**
+- 全局唯一实例，整个应用中只能有一个该页面的实例
+- 如果页面已存在，清除它上面的所有页面，并用新参数更新
+- 适用场景：购物车、首页、播放器、通知中心、设置页面
+- 注意：会清除上层页面，可能影响用户导航体验
+
+#### 使用示例
+
+```dart
+// 示例1：购物车（SingleInstance）
+void addToCart(Product product) {
+  cartItems.add(product);
+  router.push(
+    page: ShoppingCartPage(itemCount: cartItems.length, items: cartItems),
+    launchMode: LaunchMode.singleInstance,
+  );
+  // 无论从哪个页面添加商品，都会回到同一个购物车
+  // 并清除购物车上面的所有页面
+}
+
+// 示例2：搜索页面（SingleTop）
+void search(String keyword) {
+  router.push(
+    page: SearchResultPage(keyword: keyword),
+    launchMode: LaunchMode.singleTop,
+  );
+  // 多次搜索会更新搜索结果，而不是创建多个搜索页面
+}
+
+// 示例3：商品详情（Standard）
+void viewProduct(String productId) {
+  router.push(
+    page: ProductDetailPage(productId: productId),
+    launchMode: LaunchMode.standard,
+  );
+  // 用户可以打开多个商品详情页进行对比
+}
 ```
 ### 页面关闭 & 回传
 
@@ -164,7 +252,9 @@ router.showAppBottomSheet(builder: (context){
 
 ### 路由导航守卫
 
-支持路由拦截，可用于权限验证、登录检查等场景：
+支持两种方式的路由拦截，可用于权限验证、登录检查等场景：
+
+#### 方式1：命名路由守卫（适用于 pushNamed）
 
 ```dart
 // 添加路由守卫
@@ -181,11 +271,56 @@ router.addRouteGuard((from, to) async {
   return true; // 返回true允许跳转
 });
 
+// 使用命名路由跳转
+router.pushNamed(name: '/profile');
+```
+
+#### 方式2：页面类型守卫（适用于 push(page: xxx)）
+
+```dart
+// 添加页面类型守卫
+router.addPageTypeGuard((fromPageType, toPageType) async {
+  // 需要登录才能访问的页面类型
+  final protectedPageTypes = [
+    ProfilePage,
+    SettingsPage,
+    AutoPlayVideoExample,
+  ];
+  
+  final isLoggedIn = await checkLoginStatus();
+  
+  if (protectedPageTypes.contains(toPageType) && !isLoggedIn) {
+    // 拦截跳转，跳转到登录页
+    router.pushNamed(name: '/login');
+    return false; // 返回false拦截跳转
+  }
+  return true; // 返回true允许跳转
+});
+
+// 使用页面实例跳转
+router.push(page: ProfilePage());
+```
+
+#### 方式3：混合使用（同时支持两种守卫）
+
+```dart
+// 为 push 方法添加 name 参数，同时触发两种守卫
+router.push(
+  page: ProfilePage(),
+  name: '/profile',  // 添加name参数用于路由守卫识别
+);
+```
+
+#### 守卫管理
+
+```dart
 // 移除路由守卫
 router.removeRouteGuard(guard);
+router.removePageTypeGuard(pageTypeGuard);
 
-// 清空所有路由守卫
+// 清空所有守卫
 router.clearRouteGuards();
+router.clearPageTypeGuards();
 ```
 
 ### 404错误页面
@@ -378,15 +513,16 @@ final bounds = VisibilityDetectorController.instance.widgetBoundsFor(Key('my-wid
 
 ##  使用场景示例
 
-### 场景1：登录验证守卫
+### 场景1：登录验证守卫（两种方式）
 
+#### 方式1：命名路由守卫
 ```dart
 void initRouter() {
   final router = RouterProxy.getInstance(
     pageMap: {'/': HomePage(), '/login': LoginPage(), '/profile': ProfilePage()},
   );
 
-  // 添加登录验证守卫
+  // 添加命名路由守卫
   router.addRouteGuard((from, to) async {
     final protectedRoutes = ['/profile', '/settings', '/orders'];
     if (protectedRoutes.contains(to.uri.toString())) {
@@ -399,6 +535,34 @@ void initRouter() {
     return true;
   });
 }
+
+// 使用
+router.pushNamed(name: '/profile');
+```
+
+#### 方式2：页面类型守卫
+```dart
+void initRouter() {
+  final router = RouterProxy.getInstance(
+    pageMap: {'/': HomePage(), '/login': LoginPage()},
+  );
+
+  // 添加页面类型守卫
+  router.addPageTypeGuard((fromPageType, toPageType) async {
+    final protectedPageTypes = [ProfilePage, SettingsPage, OrdersPage];
+    if (protectedPageTypes.contains(toPageType)) {
+      final isLoggedIn = await checkLoginStatus();
+      if (!isLoggedIn) {
+        router.pushNamed(name: '/login');
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+// 使用
+router.push(page: ProfilePage());
 ```
 
 ### 场景2：视频播放页面生命周期
