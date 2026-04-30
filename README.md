@@ -923,11 +923,6 @@ class NotFoundPage extends StatelessWidget {
 }
 ```
 
----
-
-## 🎬 effect demonstration
-
-![](https://github.com/zhengzaihong/router_lifecycle/blob/master/images/GIF.gif)
 
 ---
 
