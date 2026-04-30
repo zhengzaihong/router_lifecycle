@@ -8,9 +8,28 @@ import 'drawer_router.dart';
 /// email:1096877329@qq.com
 /// date: 2025/2/7
 /// time: 14:53
-/// describe: 用于抽屉含有多个层级页面跳转，
-/// 实现抽屉页面栈 需配合 DrawerRouter 路由使用
-///
+/// 
+/// ⚠️ 废弃警告：此类将在未来版本中删除
+/// 
+/// 请使用新的抽屉路由栈实现方式：
+/// 
+/// ```dart
+/// // 旧方式（将被删除）
+/// DrawerRouterStack(
+///   router: drawerRouter,
+///   bind: (context) => drawerRouter.bindDrawerNavigatorContext(context),
+///   builder: (context, child) => Container(...),
+/// )
+/// 
+/// // 新方式（推荐）
+/// SimpleDrawerWidget(
+///   router: drawerRouter,
+///   width: 300,
+/// )
+/// ```
+/// 查看完整文档：DRAWER_ROUTER_USAGE.md
+
+@Deprecated('Use SimpleDrawerWidget, StyledDrawerWidget, or DrawerRouterWidget instead. This class will be removed in future versions.')
 class DrawerRouterStack extends BaseStackWidget {
 
   const DrawerRouterStack({

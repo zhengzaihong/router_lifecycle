@@ -175,6 +175,37 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // 创建抽屉路由实例
+  late final RouterProxy drawerRouter;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // 初始化抽屉路由
+    drawerRouter = RouterProxy.getDrawerInstance(
+      stackId: 'main-drawer',
+      pageMap: {
+        '/': const DrawerHomePage(),
+        '/drawer-settings': const DrawerSettingsPage(),
+        '/drawer-profile': const DrawerProfilePage(),
+      },
+      drawerConfig: const DrawerConfig(
+        autoOpen: true,
+        autoClose: true,
+        isEndDrawer: true,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // 不要在这里清理抽屉路由资源，因为 HomePage 可能会被重建
+    // 抽屉路由实例会在应用退出时自动清理
+    // RouterProxy.removeDrawerInstance('main-drawer');
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return LifeCycle(
@@ -204,6 +235,11 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ],
+        ),
+        // 添加抽屉路由栈
+        endDrawer: SimpleDrawerWidget(
+          router: drawerRouter,
+          width: 300,
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -257,6 +293,15 @@ class _HomePageState extends State<HomePage> {
               title: '命名路由值回传',
               description: '演示通过命名路由传递和接收数据',
               onTap: () => _showValueReturnDemo(context),
+            ),
+            _buildFeatureCard(
+              icon: Icons.menu,
+              title: '抽屉路由栈',
+              description: '演示抽屉内的独立路由栈管理',
+              onTap: () {
+                // 打开抽屉并跳转到设置页
+                drawerRouter.pushNamed(name: '/drawer-settings');
+              },
             ),
             _buildFeatureCard(
               icon: Icons.error_outline,
@@ -1175,4 +1220,438 @@ class SearchResultPage extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// ============ 抽屉路由栈页面 ============
+
+/// 抽屉首页
+class DrawerHomePage extends StatelessWidget {
+  const DrawerHomePage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    
+    return Column(
+      children: [
+        // 抽屉头部
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue.shade700, Colors.blue.shade500],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '抽屉路由栈',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => drawerRouter.closeDrawerStack(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '独立的路由栈管理',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // 菜单列表
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              _buildDrawerTile(
+                icon: Icons.settings,
+                title: '设置',
+                subtitle: '应用设置和偏好',
+                onTap: () {
+                  drawerRouter.push(page: const DrawerSettingsPage());
+                },
+              ),
+              _buildDrawerTile(
+                icon: Icons.person,
+                title: '个人资料',
+                subtitle: '查看和编辑个人信息',
+                onTap: () {
+                  drawerRouter.push(page: const DrawerProfilePage());
+                },
+              ),
+              _buildDrawerTile(
+                icon: Icons.notifications,
+                title: '通知',
+                subtitle: '消息和提醒',
+                onTap: () {
+                  drawerRouter.push(page: const DrawerNotificationPage());
+                },
+              ),
+              const Divider(),
+              _buildDrawerTile(
+                icon: Icons.info,
+                title: '关于',
+                subtitle: '应用信息和版本',
+                onTap: () {
+                  drawerRouter.push(page: const DrawerAboutPage());
+                },
+              ),
+              _buildDrawerTile(
+                icon: Icons.help,
+                title: '帮助',
+                subtitle: '使用指南和常见问题',
+                onTap: () {
+                  drawerRouter.push(page: const DrawerHelpPage());
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDrawerTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.blue),
+      title: Text(title),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+}
+
+/// 抽屉设置页
+class DrawerSettingsPage extends StatelessWidget {
+  const DrawerSettingsPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    
+    return Column(
+      children: [
+        AppBar(
+          title: const Text('设置'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => drawerRouter.pop(),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => drawerRouter.closeDrawerStack(),
+            ),
+          ],
+        ),
+        Expanded(
+          child: ListView(
+            children: [
+              _buildSettingSection(
+                title: '通用设置',
+                items: [
+                  _buildSettingTile(
+                    icon: Icons.language,
+                    title: '语言',
+                    subtitle: '简体中文',
+                    onTap: () {
+                      drawerRouter.push(page: const DrawerLanguagePage());
+                    },
+                  ),
+                  _buildSettingTile(
+                    icon: Icons.palette,
+                    title: '主题',
+                    subtitle: '跟随系统',
+                    onTap: () {
+                      drawerRouter.push(page: const DrawerThemePage());
+                    },
+                  ),
+                ],
+              ),
+              _buildSettingSection(
+                title: '隐私设置',
+                items: [
+                  _buildSettingTile(
+                    icon: Icons.lock,
+                    title: '隐私',
+                    subtitle: '管理隐私选项',
+                    onTap: () {
+                      drawerRouter.push(page: const DrawerPrivacyPage());
+                    },
+                  ),
+                  _buildSettingTile(
+                    icon: Icons.security,
+                    title: '安全',
+                    subtitle: '密码和安全设置',
+                    onTap: () {
+                      drawerRouter.push(page: const DrawerSecurityPage());
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingSection({
+    required String title,
+    required List<Widget> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        ...items,
+      ],
+    );
+  }
+
+  Widget _buildSettingTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+}
+
+/// 抽屉个人资料页
+class DrawerProfilePage extends StatelessWidget {
+  const DrawerProfilePage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    
+    return Column(
+      children: [
+        AppBar(
+          title: const Text('个人资料'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => drawerRouter.pop(),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                drawerRouter.push(page: const DrawerEditProfilePage());
+              },
+            ),
+          ],
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Center(
+                child: CircleAvatar(
+                  radius: 50,
+                  child: Icon(Icons.person, size: 50),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Center(
+                child: Text(
+                  '用户名',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Center(
+                child: Text(
+                  'user@example.com',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 32),
+              _buildInfoCard('手机号', '+86 138 0000 0000'),
+              _buildInfoCard('生日', '1990-01-01'),
+              _buildInfoCard('地址', '北京市朝阳区'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard(String label, String value) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(value, style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 其他抽屉子页面（简化实现）
+class DrawerNotificationPage extends StatelessWidget {
+  const DrawerNotificationPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '通知', Icons.notifications);
+  }
+}
+
+class DrawerAboutPage extends StatelessWidget {
+  const DrawerAboutPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '关于', Icons.info);
+  }
+}
+
+class DrawerHelpPage extends StatelessWidget {
+  const DrawerHelpPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '帮助', Icons.help);
+  }
+}
+
+class DrawerLanguagePage extends StatelessWidget {
+  const DrawerLanguagePage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '语言设置', Icons.language);
+  }
+}
+
+class DrawerThemePage extends StatelessWidget {
+  const DrawerThemePage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '主题设置', Icons.palette);
+  }
+}
+
+class DrawerPrivacyPage extends StatelessWidget {
+  const DrawerPrivacyPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '隐私设置', Icons.lock);
+  }
+}
+
+class DrawerSecurityPage extends StatelessWidget {
+  const DrawerSecurityPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '安全设置', Icons.security);
+  }
+}
+
+class DrawerEditProfilePage extends StatelessWidget {
+  const DrawerEditProfilePage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    return _buildSimplePage(drawerRouter, '编辑资料', Icons.edit);
+  }
+}
+
+Widget _buildSimplePage(RouterProxy router, String title, IconData icon) {
+  return Column(
+    children: [
+      AppBar(
+        title: Text(title),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => router.pop(),
+        ),
+      ),
+      Expanded(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 80, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '这是一个示例页面',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
 }

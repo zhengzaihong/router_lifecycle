@@ -7,30 +7,42 @@ import 'package:flutter/material.dart';
 /// date: 2025/2/6
 /// time: 15:26
 /// describe: 基于 router_pro 路由
-/// 需配合 DrawerRouterStack 组件使用
-/// 实现抽屉路由栈，使用请先绑定正确的 context
-/// bindDrawerNavigatorContext(),通常为 Scaffold 子组件的上下文，非根 context
-/// eg:
-//      final drawerRouter = DrawerRouter.getInstance();
-//
-//        Scaffold(
-//          endDrawer:DrawerRouterStack(
-//           listenable: drawerRouter,
-//           bind: (context)=>drawerRouter.bindDrawerNavigatorContext(context),
-//           builder: (context, child) {
-//             return SmartDrawer(
-//               width: 780,
-//               child: drawerRouter.getCurrentPage(),
-//             );
-//           },
-//         ),
-//         body: Text(""),
-//       )
-//  跳转： drawerRouter.push(page:xxxx)
-//  关闭： drawerRouter.pop()
+/// 
+/// ⚠️ 废弃警告：此类将在未来版本中删除
+/// 
+/// 请使用新的抽屉路由栈实现方式：
+/// 
+/// ```dart
+/// // 旧方式（将被删除）
+/// final drawerRouter = DrawerRouter.getInstance();
+/// 
+/// // 新方式（推荐）
+/// final drawerRouter = RouterProxy.getDrawerInstance(
+///   stackId: 'main-drawer',
+///   pageMap: {'/': DrawerHomePage()},
+///   drawerConfig: DrawerConfig(
+///     autoOpen: true,
+///     autoClose: true,
+///     isEndDrawer: true,
+///   ),
+/// );
+/// 
+/// // 使用封装 Widget（自动处理绑定和刷新）
+/// Scaffold(
+///   endDrawer: SimpleDrawerWidget(
+///     router: drawerRouter,
+///     width: 300,
+///   ),
+/// );
+/// 
+/// // 路由操作
+/// drawerRouter.push(page: SettingsPage());
+/// drawerRouter.pop();
+/// ```
+/// 
+/// 查看完整文档：DRAWER_ROUTER_USAGE.md
 
-
-
+@Deprecated('Use RouterProxy.getDrawerInstance() instead. This class will be removed in future versions.')
 class DrawerRouter extends RouterDelegate<RouteInformation> with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
 
   Map? pageMap = {};
@@ -76,7 +88,7 @@ class DrawerRouter extends RouterDelegate<RouteInformation> with ChangeNotifier,
   Widget build(BuildContext context) {
     return PopScope(
         canPop: false,
-        onPopInvoked: _onPopInvoked,
+        onPopInvokedWithResult: _onPopInvokedWithResult,
         child: Navigator(
           key: navigatorKey,
           pages: List.of(_pages),
@@ -84,7 +96,7 @@ class DrawerRouter extends RouterDelegate<RouteInformation> with ChangeNotifier,
         ));
   }
 
-  void _onPopInvoked(bool didPop) {
+  void _onPopInvokedWithResult(bool didPop, dynamic result) {
     // 当 canPop 为 false 时, didPop 总是 false.
     // 我们在此处手动处理返回手势.
     if (!didPop) {

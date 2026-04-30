@@ -35,6 +35,7 @@
 - ✅ 支持 **命名路由值回传**
 - ✅ 支持 **路由导航守卫**（拦截器）
 - ✅ 支持 **404错误页面**自定义
+- ✅ 支持 **抽屉路由栈**（独立的抽屉路由管理）
 - ✅ 无需 BuildContext 即可使用路由功能
 
 ## 📦 安装
@@ -528,7 +529,209 @@ void handleNotification(String deepLink) {
 
 ---
 
-## ⚡ 功能四：生命周期感知
+## ⚡ 功能四：抽屉路由栈
+
+支持在抽屉（Drawer）中创建独立的路由栈，每个抽屉路由栈都拥有完整的路由功能。
+
+### 核心特性
+
+- ✅ **独立路由栈**：抽屉内有自己的页面栈，不影响主路由
+- ✅ **自动刷新**：push/pop 时自动更新抽屉显示
+- ✅ **自动绑定**：无需手动调用 `bindDrawerContext()`
+- ✅ **完整功能**：支持路由守卫、启动模式、值回传等
+- ✅ **多实例支持**：可创建多个独立的抽屉路由栈
+
+### 基本使用
+
+```dart
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  late final RouterProxy drawerRouter;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // 创建抽屉路由实例
+    drawerRouter = RouterProxy.getDrawerInstance(
+      stackId: 'main-drawer',
+      pageMap: {
+        '/': DrawerHomePage(),
+        '/settings': DrawerSettingsPage(),
+      },
+      drawerConfig: DrawerConfig(
+        autoOpen: true,   // 首次 push 时自动打开抽屉
+        autoClose: true,  // 栈为空时自动关闭抽屉
+        isEndDrawer: true, // 右侧抽屉
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // 清理资源
+    RouterProxy.removeDrawerInstance('main-drawer');
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('主页')),
+      // 使用 SimpleDrawerWidget，自动处理 context 绑定和刷新
+      endDrawer: SimpleDrawerWidget(
+        router: drawerRouter,
+        width: 300,
+      ),
+      body: ElevatedButton(
+        onPressed: () {
+          // 打开抽屉并跳转到设置页
+          drawerRouter.pushNamed(name: '/settings');
+        },
+        child: Text('打开抽屉设置'),
+      ),
+    );
+  }
+}
+```
+
+### 抽屉内的页面
+
+```dart
+class DrawerHomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    
+    return Column(
+      children: [
+        AppBar(
+          title: Text('抽屉菜单'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.close),
+              onPressed: () => drawerRouter.closeDrawerStack(),
+            ),
+          ],
+        ),
+        ListTile(
+          leading: Icon(Icons.settings),
+          title: Text('设置'),
+          onTap: () {
+            drawerRouter.push(page: DrawerSettingsPage());
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.person),
+          title: Text('个人资料'),
+          onTap: () {
+            drawerRouter.push(page: DrawerProfilePage());
+          },
+        ),
+      ],
+    );
+  }
+}
+```
+
+### 三种封装 Widget
+
+为了简化使用，提供了三种封装 Widget：
+
+#### 1. SimpleDrawerWidget（推荐）
+
+最简单的使用方式：
+
+```dart
+endDrawer: SimpleDrawerWidget(
+  router: drawerRouter,
+  width: 300,
+  backgroundColor: Colors.white,  // 可选
+),
+```
+
+#### 2. StyledDrawerWidget（自定义样式）
+
+支持更多样式自定义：
+
+```dart
+endDrawer: StyledDrawerWidget(
+  router: drawerRouter,
+  width: 320,
+  backgroundColor: Colors.white,
+  borderRadius: BorderRadius.circular(16),
+  boxShadow: [
+    BoxShadow(
+      color: Colors.black26,
+      blurRadius: 10,
+      offset: Offset(-2, 0),
+    ),
+  ],
+),
+```
+
+#### 3. DrawerRouterWidget（完全自定义）
+
+需要完全控制子组件时使用：
+
+```dart
+endDrawer: DrawerRouterWidget(
+  router: drawerRouter,
+  width: 300,
+  child: CustomDrawerContent(),
+),
+```
+
+### 抽屉控制方法
+
+```dart
+// 抽屉路由栈方法（用于抽屉内部）
+drawerRouter.openDrawerStack();      // 打开抽屉
+drawerRouter.closeDrawerStack();     // 关闭抽屉
+drawerRouter.isDrawerStackOpen;      // 检查抽屉是否打开
+
+// 主路由栈方法（用于主页面控制抽屉）
+router.openMainDrawer(isEndDrawer: true);   // 打开右侧抽屉
+router.closeMainDrawer(isEndDrawer: false); // 关闭左侧抽屉
+router.isMainDrawerOpen(isEndDrawer: true); // 检查右侧抽屉是否打开
+```
+
+### 多个抽屉路由栈
+
+可以创建多个独立的抽屉路由栈：
+
+```dart
+// 左侧抽屉
+final leftDrawer = RouterProxy.getDrawerInstance(
+  stackId: 'left-drawer',
+  pageMap: {'/': LeftDrawerHome()},
+  drawerConfig: DrawerConfig(isEndDrawer: false),
+);
+
+// 右侧抽屉
+final rightDrawer = RouterProxy.getDrawerInstance(
+  stackId: 'right-drawer',
+  pageMap: {'/': RightDrawerHome()},
+  drawerConfig: DrawerConfig(isEndDrawer: true),
+);
+
+Scaffold(
+  drawer: SimpleDrawerWidget(router: leftDrawer, width: 250),
+  endDrawer: SimpleDrawerWidget(router: rightDrawer, width: 300),
+);
+```
+
+### 完整示例
+
+查看 [DRAWER_ROUTER_USAGE.md](DRAWER_ROUTER_USAGE.md) 获取更多详细示例和使用指南。
+
+---
+
+## ⚡ 功能五：生命周期感知
 
 让 **StatelessWidget / StatefulWidget** 具备 `onResume / onPause / onDestroy` 能力：
 
@@ -584,7 +787,7 @@ LifeCycle(
 
 ---
 
-## ⚡ 功能五：可见性检测（VisibilityDetector）
+## ⚡ 功能六：可见性检测（VisibilityDetector）
 
 底层可见性检测组件，支持精确的可见性监控。
 

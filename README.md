@@ -35,6 +35,7 @@ However, Flutter's **StatelessWidget/StatefulWidget** does not natively support 
 - ✅ Support **Named Route Value Return**
 - ✅ Support **Route Navigation Guards** (Interceptors)
 - ✅ Support **Custom 404 Error Page**
+- ✅ Support **Drawer Router Stack** (Independent drawer routing management)
 - ✅ Use routing without BuildContext dependency
 
 ## 📦 install
@@ -512,7 +513,135 @@ void handleNotification(String deepLink) {
 
 ---
 
-## ⚡ Feature 4: Lifecycle Awareness
+## ⚡ Feature 4: Drawer Router Stack
+
+Support creating independent router stacks within drawers, each with complete routing functionality.
+
+### Core Features
+
+- ✅ **Independent Router Stack**: Drawer has its own page stack, doesn't affect main router
+- ✅ **Auto Refresh**: Automatically updates drawer display on push/pop
+- ✅ **Auto Binding**: No need to manually call `bindDrawerContext()`
+- ✅ **Complete Features**: Supports route guards, launch modes, value return, etc.
+- ✅ **Multi-instance Support**: Can create multiple independent drawer router stacks
+
+### Basic Usage
+
+```dart
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  late final RouterProxy drawerRouter;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Create drawer router instance
+    drawerRouter = RouterProxy.getDrawerInstance(
+      stackId: 'main-drawer',
+      pageMap: {
+        '/': DrawerHomePage(),
+        '/settings': DrawerSettingsPage(),
+      },
+      drawerConfig: DrawerConfig(
+        autoOpen: true,   // Auto open drawer on first push
+        autoClose: true,  // Auto close drawer when stack is empty
+        isEndDrawer: true, // Right drawer
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // Clean up resources
+    RouterProxy.removeDrawerInstance('main-drawer');
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Home')),
+      // Use SimpleDrawerWidget, auto handles context binding and refresh
+      endDrawer: SimpleDrawerWidget(
+        router: drawerRouter,
+        width: 300,
+      ),
+      body: ElevatedButton(
+        onPressed: () {
+          // Open drawer and navigate to settings
+          drawerRouter.pushNamed(name: '/settings');
+        },
+        child: Text('Open Drawer Settings'),
+      ),
+    );
+  }
+}
+```
+
+### Three Wrapper Widgets
+
+#### 1. SimpleDrawerWidget (Recommended)
+
+Simplest usage:
+
+```dart
+endDrawer: SimpleDrawerWidget(
+  router: drawerRouter,
+  width: 300,
+),
+```
+
+#### 2. StyledDrawerWidget (Custom Styles)
+
+Supports more style customization:
+
+```dart
+endDrawer: StyledDrawerWidget(
+  router: drawerRouter,
+  width: 320,
+  borderRadius: BorderRadius.circular(16),
+  boxShadow: [BoxShadow(...)],
+),
+```
+
+#### 3. DrawerRouterWidget (Full Control)
+
+For complete control over child widgets:
+
+```dart
+endDrawer: DrawerRouterWidget(
+  router: drawerRouter,
+  width: 300,
+  child: CustomDrawerContent(),
+),
+```
+
+### Drawer Control Methods
+
+```dart
+// Drawer router stack methods (for inside drawer)
+drawerRouter.openDrawerStack();      // Open drawer
+drawerRouter.closeDrawerStack();     // Close drawer
+drawerRouter.isDrawerStackOpen;      // Check if drawer is open
+
+// Main router stack methods (for controlling drawer from main page)
+router.openMainDrawer(isEndDrawer: true);   // Open right drawer
+router.closeMainDrawer(isEndDrawer: false); // Close left drawer
+router.isMainDrawerOpen(isEndDrawer: true); // Check if right drawer is open
+```
+
+### Complete Example
+
+See [DRAWER_ROUTER_USAGE.md](DRAWER_ROUTER_USAGE.md) for more detailed examples and usage guide.
+
+---
+
+## ⚡ Feature 5: Lifecycle Awareness
 
 Make **StatelessWidget / StatefulWidget** have `onResume / onPause / onDestroy` ability：
 
@@ -568,7 +697,7 @@ LifeCycle(
 
 ---
 
-## ⚡ Function 3: Visibility Detection
+## ⚡ Function 6: Visibility Detection
 
 Low-level visibility detection component for precise visibility monitoring.
 

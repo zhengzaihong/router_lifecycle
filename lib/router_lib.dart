@@ -5,6 +5,8 @@ export 'router/router_proxy.dart';
 export 'router/custom_parser.dart';
 export 'router/enhanced_parser.dart';
 export 'router/route_pattern.dart';
+export 'router/drawer_config.dart';
+export 'router/drawer_router_widget.dart';
 export 'wrapper/life_cycle.dart';
 // export 'router/empty_page.dart';
 export 'router/drawer_router.dart';
