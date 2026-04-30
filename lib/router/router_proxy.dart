@@ -25,7 +25,7 @@ import 'drawer_config.dart';
 //       '/profile': const ProfilePage(),
 //     },
 //     notFoundPage: const NotFoundPage(),
-//     exitWindowStyle: _confirmExit,
+//     exitWindow: _confirmExit,
 //   );
 //
 //   // 添加命名路由守卫
@@ -151,7 +151,7 @@ import 'drawer_config.dart';
 //
 // 查看完整文档：DRAWER_ROUTER_USAGE.md
 //
-// ============ exitWindowStyle 示例 ============
+// ============ exitWindow 示例 ============
 //
 //   Future<bool> _confirmExit(BuildContext context) async {
 //     final result = await showDialog<bool>(
@@ -175,7 +175,7 @@ import 'drawer_config.dart';
 //   }
 
 typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
-typedef ExitWindowStyle = Future<bool> Function(BuildContext context);
+typedef ExitWindow = Future<bool> Function(BuildContext context);
 typedef NavigateToTargetCallBack = void Function(BuildContext context, Widget? page);
 typedef ResultCallBack = void Function(dynamic result);
 typedef RouteGuard = Future<bool> Function(RouteInformation from, RouteInformation to);
@@ -227,7 +227,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   RoutePathCallBack? _routePathCallBack;
 
   /// 移动端退出程序时自定义页面的回调（仅用于主路由栈）
-  ExitWindowStyle? _exitWindowStyle;
+  ExitWindow? _exitWindow;
 
   /// 特定页面跳转(非实际跳转)的回调, 例如切换底部Tab（仅用于主路由栈）
   NavigateToTargetCallBack? _navigateToTargetCallBack;
@@ -263,7 +263,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     this.isMainStack = false,
     this.isDrawerStack = false,
     DrawerConfig? drawerConfig,
-    ExitWindowStyle? exitWindowStyle,
+    ExitWindow? exitWindow,
     RoutePathCallBack? routePathCallBack,
     NavigateToTargetCallBack? navigateToTargetCallBack,
     this.pageMap,
@@ -272,14 +272,17 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }) : _navigatorKey = GlobalKey<NavigatorState>(debugLabel: stackId),
        _drawerConfig = drawerConfig,
        super() {
-    _exitWindowStyle = exitWindowStyle;
+    _exitWindow = exitWindow;
     _routePathCallBack = routePathCallBack;
     _navigateToTargetCallBack = navigateToTargetCallBack;
     _maxQueue = maxQueue;
     _notFoundPage = notFoundPage;
-    pageMap?.forEach((key, value) {
-      _pages.add(MaterialPage(child: value));
-    });
+    
+    // 只添加根页面到初始栈
+    if (pageMap != null && pageMap!.containsKey('/')) {
+      _pages.add(MaterialPage(child: pageMap!['/']));
+      _location = '/';
+    }
   }
 
   /// 获取主路由实例（单例）
@@ -299,7 +302,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// ```
   static RouterProxy getInstance({
     RoutePathCallBack? routePathCallBack,
-    ExitWindowStyle? exitWindowStyle,
+    ExitWindow? exitWindow,
     NavigateToTargetCallBack? navigateToTargetCallBack,
     Map? pageMap,
     Widget? notFoundPage,
@@ -309,7 +312,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       isMainStack: true,
       isDrawerStack: false,
       routePathCallBack: routePathCallBack,
-      exitWindowStyle: exitWindowStyle,
+      exitWindow: exitWindow,
       navigateToTargetCallBack: navigateToTargetCallBack,
       pageMap: pageMap,
       notFoundPage: notFoundPage,
@@ -364,6 +367,15 @@ class RouterProxy extends RouterDelegate<RouteInformation>
         pageMap: pageMap,
         drawerConfig: drawerConfig ?? const DrawerConfig(),
       );
+    } else {
+      // 如果实例已存在，更新 pageMap 和 drawerConfig
+      final instance = _drawerInstances[stackId]!;
+      if (pageMap != null) {
+        instance.pageMap = pageMap;
+      }
+      if (drawerConfig != null) {
+        instance._drawerConfig = drawerConfig;
+      }
     }
     return _drawerInstances[stackId]!;
   }
@@ -693,8 +705,8 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     if (isDrawerStack) {
       return Navigator(
         key: navigatorKey,
-        pages: _pages.isEmpty ? [MaterialPage(child: const SizedBox.shrink())] : List.of(_pages),
-        onDidRemovePage: _onDidRemovePage,
+        pages: _pages.isEmpty ? [const MaterialPage(child: SizedBox.shrink())] : List.of(_pages),
+        onPopPage: _onPopPage,
       );
     }
     
@@ -705,7 +717,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
         child: Navigator(
           key: navigatorKey,
           pages: List.of(_pages),
-          onDidRemovePage: _onDidRemovePage,
+          onPopPage: _onPopPage,
         ));
   }
 
@@ -717,9 +729,17 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     }
   }
 
-  void _onDidRemovePage(Page page) {
-    // 页面被移除时的回调（通知性质，不需要返回值）
-    // 这里不需要做任何操作，因为我们在 pop() 方法中已经处理了页面移除
+  bool _onPopPage(Route route, dynamic result) {
+    // 处理用户的侧滑返回手势和 pop 操作
+    if (!route.didPop(result)) {
+      return false;
+    }
+    if (canPop()) {
+      _popAndOnResult(result);
+      notify();
+      return true;
+    }
+    return false;
   }
 
 
@@ -743,9 +763,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     }
 
     /// 如果页面栈也不能pop，则执行自定义的退出逻辑
-    return _exitWindowStyle == null
+    return _exitWindow == null
         ? Future.value(false)
-        : _exitWindowStyle!.call(navigatorKey.currentContext!);
+        : _exitWindow!.call(navigatorKey.currentContext!);
   }
 
   /// 检查页面栈是否可以pop
@@ -762,11 +782,6 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       bool fullscreenDialog = false,
       bool allowSnapshotting = true,
       LaunchMode launchMode = LaunchMode.standard}) async {
-    
-    // 抽屉栈：首次 push 时自动打开抽屉
-    if (isDrawerStack && _pages.isEmpty && _drawerConfig?.autoOpen == true) {
-      openDrawerStack();
-    }
     
     // 执行路由守卫检查（基于路由名称）
     final from = RouteInformation(uri: Uri.parse(_location ?? '/'));
@@ -992,6 +1007,18 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 将页面置于栈顶（如果已存在则先移除）
+  /// 
+  /// @deprecated 使用 push(page: xxx, launchMode: LaunchMode.singleInstance) 代替
+  /// 
+  /// 示例：
+  /// ```dart
+  /// // 旧方式
+  /// router.pushStackTop(page: HomePage());
+  /// 
+  /// // 新方式（推荐）
+  /// router.push(page: HomePage(), launchMode: LaunchMode.singleInstance);
+  /// ```
+  @Deprecated('Use push(page: xxx, launchMode: LaunchMode.singleInstance) instead')
   void pushStackTop({required Widget page}) {
     if (_pages.isNotEmpty) {
       _pages.removeWhere(
@@ -1012,6 +1039,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   void notify() {
+    debugPrint('[$stackId] notify() called, hasListeners: $hasListeners');
     notifyListeners();
   }
 

@@ -1,4 +1,4 @@
-# 🚀 Router Pro · Routing & Lifecycle Awareness Tools
+# 🚀 Router Pro · 路由与生命周期感知工具
 
 [![pub package](https://img.shields.io/pub/v/router_pro.svg)](https://pub.dev/packages/router_pro)
 [![GitHub stars](https://img.shields.io/github/stars/zhengzaihong/router_lifecycle.svg?style=social)](https://github.com/zhengzaihong/router_lifecycle)
@@ -8,35 +8,44 @@
 
 ---
 
-## ✨ 为什么选择 Router Pro?
+## ✨ 概述
 
-在 Flutter 开发中，页面往往需要像 Android 的 **Activity/Fragment** 一样具备生命周期能力（`onResume`、`onPause`、`onDestroy`），用于懒加载或提升性能体验。  
-但 Flutter 的 **StatelessWidget/StatefulWidget** 并不原生支持这些特性。
+**Router Pro** 是一个强大的 Flutter 路由框架，结合了 **Navigator 2.0** 和**生命周期感知**，提供类似 Android 的生命周期能力和高级路由功能。
 
-**Router Pro 提供了完整的解决方案：**
+### 🎯 核心功能
 
-- 🔗 **路由代理**：更轻松的页面跳转与回退  
-- ⏱ **生命周期感知**：Stateless/StatefulWidget 秒变 Activity/Fragment  
-- 🚀 **路由启动模式**：支持标准、栈顶复用、单例三种模式
-- 🛡️ **路由守卫**：支持路由拦截，实现权限验证
-- 🎯 **命名路由值回传**：支持通过命名路由传递和接收数据
-- 🪶 **解耦设计**：路由与生命周期独立使用  
-- 🌍 **跨平台支持**：App & Web
+#### 🔄 高级路由
+- **启动模式**：Standard、SingleTop、SingleInstance（类似 Android）
+- **路由守卫**：拦截导航进行权限检查
+- **命名路由**：支持路径参数（`:id`）和查询参数
+- **值回传**：从路由返回数据
+- **抽屉路由栈**：抽屉内的独立路由管理
+- **404 处理**：自定义错误页面
+
+#### ⏱️ 生命周期感知
+- **原生级生命周期**：`onCreate`、`onResume`、`onPause`、`onDestroy`
+- **可见性检测**：跟踪列表中 Widget 的可见性
+- **懒加载**：仅在可见时加载内容
+- **自动播放/暂停**：根据可见性控制视频
+
+#### 🎨 开发体验
+- **无需 BuildContext**：无需 context 即可导航
+- **类型安全**：完整的 Dart 类型安全
+- **解耦设计**：路由和生命周期可独立使用
+- **跨平台**：支持 App 和 Web
 
 ---
 
-## 🌟 特点总结
+## 🌟 为什么选择 Router Pro？
 
-- ✅ Flutter 页面也能享受 **原生生命周期感知**
-- ✅ 提供更优雅的 **路由跳转/关闭 API**
-- ✅ **解耦设计**：路由和生命周期可单独使用
-- ✅ 支持 **跨平台（App & Web）**
-- ✅ 支持 **路由启动模式**（标准、栈顶复用、单例）
-- ✅ 支持 **命名路由值回传**
-- ✅ 支持 **路由导航守卫**（拦截器）
-- ✅ 支持 **404错误页面**自定义
-- ✅ 支持 **抽屉路由栈**（独立的抽屉路由管理）
-- ✅ 无需 BuildContext 即可使用路由功能
+Flutter 的 **StatelessWidget/StatefulWidget** 不像 Android 的 **Activity/Fragment** 那样原生支持生命周期回调。这使得以下场景变得困难：
+- 页面隐藏时暂停/恢复视频
+- 仅在页面可见时加载数据
+- 页面销毁时清理资源
+
+**Router Pro 解决了这些问题**，提供了一个完整的路由和生命周期解决方案，让 Android 开发者感到熟悉，同时拥抱 Flutter 的声明式风格。
+
+---
 
 ## 📦 安装
 
@@ -62,7 +71,7 @@ import 'package:router_pro/router_lib.dart';
 ```dart
 RouterProxy router = RouterProxy.getInstance(
   pageMap: {'/': const Login()},
-  exitWindowStyle: _confirmExit,
+  exitWindow: _confirmExit,
   notFoundPage: const NotFoundPage(), // 可选：自定义404页面
 );
 ```
@@ -537,7 +546,7 @@ void handleNotification(String deepLink) {
 
 - ✅ **独立路由栈**：抽屉内有自己的页面栈，不影响主路由
 - ✅ **自动刷新**：push/pop 时自动更新抽屉显示
-- ✅ **自动绑定**：无需手动调用 `bindDrawerContext()`
+- ✅ **无 Context 依赖**：使用 GlobalKey 管理抽屉状态，避免 context 绑定问题
 - ✅ **完整功能**：支持路由守卫、启动模式、值回传等
 - ✅ **多实例支持**：可创建多个独立的抽屉路由栈
 
@@ -550,20 +559,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late final RouterProxy drawerRouter;
+  // 1. 创建 GlobalKey
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  late final DrawerStackController controller;
 
   @override
   void initState() {
     super.initState();
     
-    // 创建抽屉路由实例
-    drawerRouter = RouterProxy.getDrawerInstance(
-      stackId: 'main-drawer',
-      pageMap: {
-        '/': DrawerHomePage(),
-        '/settings': DrawerSettingsPage(),
-      },
-      drawerConfig: DrawerConfig(
+    // 2. 使用 GlobalKey 创建 DrawerStackController
+    controller = DrawerStackController(
+      scaffoldKey: scaffoldKey,
+      routerProxy: RouterProxy.getDrawerInstance(
+        stackId: 'main-drawer',
+        pageMap: {
+          '/': DrawerHomePage(),
+          '/settings': DrawerSettingsPage(),
+        },
+      ),
+      config: DrawerConfig(
         autoOpen: true,   // 首次 push 时自动打开抽屉
         autoClose: true,  // 栈为空时自动关闭抽屉
         isEndDrawer: true, // 右侧抽屉
@@ -574,23 +588,25 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void dispose() {
     // 清理资源
-    RouterProxy.removeDrawerInstance('main-drawer');
+    controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: scaffoldKey, // 3. 将 GlobalKey 传给 Scaffold
       appBar: AppBar(title: Text('主页')),
-      // 使用 SimpleDrawerWidget，自动处理 context 绑定和刷新
-      endDrawer: SimpleDrawerWidget(
-        router: drawerRouter,
+      // 4. 使用 DrawerNavigator，样式由外层 Container 控制
+      endDrawer: Container(
         width: 300,
+        color: Colors.white,
+        child: DrawerNavigator(controller: controller),
       ),
       body: ElevatedButton(
         onPressed: () {
-          // 打开抽屉并跳转到设置页
-          drawerRouter.pushNamed(name: '/settings');
+          // 5. 直接调用，无需担心 context
+          controller.push(page: DrawerSettingsPage());
         },
         child: Text('打开抽屉设置'),
       ),
@@ -601,11 +617,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
 ### 抽屉内的页面
 
+在抽屉页面中使用 `InheritedDrawerStackController` 访问控制器：
+
 ```dart
 class DrawerHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    // 从 context 获取控制器
+    final controller = InheritedDrawerStackController.of(context);
     
     return Column(
       children: [
@@ -614,23 +633,14 @@ class DrawerHomePage extends StatelessWidget {
           actions: [
             IconButton(
               icon: Icon(Icons.close),
-              onPressed: () => drawerRouter.closeDrawerStack(),
+              onPressed: () => controller?.closeDrawer(),
             ),
           ],
         ),
         ListTile(
           leading: Icon(Icons.settings),
           title: Text('设置'),
-          onTap: () {
-            drawerRouter.push(page: DrawerSettingsPage());
-          },
-        ),
-        ListTile(
-          leading: Icon(Icons.person),
-          title: Text('个人资料'),
-          onTap: () {
-            drawerRouter.push(page: DrawerProfilePage());
-          },
+          onTap: () => controller?.push(page: DrawerSettingsPage()),
         ),
       ],
     );
@@ -638,96 +648,24 @@ class DrawerHomePage extends StatelessWidget {
 }
 ```
 
-### 三种封装 Widget
-
-为了简化使用，提供了三种封装 Widget：
-
-#### 1. SimpleDrawerWidget（推荐）
-
-最简单的使用方式：
-
-```dart
-endDrawer: SimpleDrawerWidget(
-  router: drawerRouter,
-  width: 300,
-  backgroundColor: Colors.white,  // 可选
-),
-```
-
-#### 2. StyledDrawerWidget（自定义样式）
-
-支持更多样式自定义：
-
-```dart
-endDrawer: StyledDrawerWidget(
-  router: drawerRouter,
-  width: 320,
-  backgroundColor: Colors.white,
-  borderRadius: BorderRadius.circular(16),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black26,
-      blurRadius: 10,
-      offset: Offset(-2, 0),
-    ),
-  ],
-),
-```
-
-#### 3. DrawerRouterWidget（完全自定义）
-
-需要完全控制子组件时使用：
-
-```dart
-endDrawer: DrawerRouterWidget(
-  router: drawerRouter,
-  width: 300,
-  child: CustomDrawerContent(),
-),
-```
-
 ### 抽屉控制方法
 
 ```dart
-// 抽屉路由栈方法（用于抽屉内部）
-drawerRouter.openDrawerStack();      // 打开抽屉
-drawerRouter.closeDrawerStack();     // 关闭抽屉
-drawerRouter.isDrawerStackOpen;      // 检查抽屉是否打开
+// DrawerStackController 方法
+controller.openDrawer();      // 打开抽屉
+controller.closeDrawer();     // 关闭抽屉
+controller.isDrawerOpen;      // 检查抽屉是否打开
+
+// 导航方法（与 RouterProxy 相同）
+controller.push(page: SettingsPage());
+controller.pushNamed(name: '/settings');
+controller.pop();
 
 // 主路由栈方法（用于主页面控制抽屉）
 router.openMainDrawer(isEndDrawer: true);   // 打开右侧抽屉
 router.closeMainDrawer(isEndDrawer: false); // 关闭左侧抽屉
 router.isMainDrawerOpen(isEndDrawer: true); // 检查右侧抽屉是否打开
 ```
-
-### 多个抽屉路由栈
-
-可以创建多个独立的抽屉路由栈：
-
-```dart
-// 左侧抽屉
-final leftDrawer = RouterProxy.getDrawerInstance(
-  stackId: 'left-drawer',
-  pageMap: {'/': LeftDrawerHome()},
-  drawerConfig: DrawerConfig(isEndDrawer: false),
-);
-
-// 右侧抽屉
-final rightDrawer = RouterProxy.getDrawerInstance(
-  stackId: 'right-drawer',
-  pageMap: {'/': RightDrawerHome()},
-  drawerConfig: DrawerConfig(isEndDrawer: true),
-);
-
-Scaffold(
-  drawer: SimpleDrawerWidget(router: leftDrawer, width: 250),
-  endDrawer: SimpleDrawerWidget(router: rightDrawer, width: 300),
-);
-```
-
-### 完整示例
-
-查看 [DRAWER_ROUTER_USAGE.md](DRAWER_ROUTER_USAGE.md) 获取更多详细示例和使用指南。
 
 ---
 
@@ -1136,7 +1074,7 @@ flutter run
 
 ## 🛠 其他说明
 
-- `ExitWindowStyle`：可自定义退出程序提示框
+- `ExitWindow`：可自定义退出程序提示框
 - Web 端：支持浏览器直达，需要自定义 `RouteParser`
 - 完整 API 文档：查看源码注释
 

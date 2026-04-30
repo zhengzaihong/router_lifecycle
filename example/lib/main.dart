@@ -6,13 +6,13 @@ import 'visibility_example.dart';
 /// 包含所有功能演示：
 /// 1. 路由启动模式
 /// 2. 路由守卫
-/// 3. 命名路由值回传
+/// 3. 命名路由值回�?
 /// 4. 404错误页面
 /// 5. 生命周期感知
-/// 6. 可见性检测
+/// 6. 可见性检�?
 
 void main() {
-  // 初始化路由
+  // 初始化路�?
   initRouter();
   runApp(const MyApp());
 }
@@ -20,7 +20,7 @@ void main() {
 // 全局路由实例
 late RouterProxy router;
 
-// 模拟登录状态
+// 模拟登录状�?
 bool _isLoggedIn = false;
 
 void initRouter() {
@@ -36,12 +36,12 @@ void initRouter() {
       '/exposure': const ExposureTrackingExample(),
     },
     notFoundPage: const NotFoundPage(),
-    exitWindowStyle: _confirmExit,
+    exitWindow: _confirmExit,
     routePathCallBack: (routeInfo) {
-      // 动态路由回调 - 用于处理路径参数
+      // 动态路由回�?- 用于处理路径参数
       final path = routeInfo.uri.path;
       
-      // 从 state 中获取解析后的参数
+      // �?state 中获取解析后的参�?
       final params = RouteParams.fromState(routeInfo.state);
       
       if (params != null) {
@@ -85,7 +85,7 @@ void initRouter() {
     final protectedRoutes = ['/profile'];
     
     if (protectedRoutes.contains(to.uri.toString()) && !_isLoggedIn) {
-      debugPrint('路由守卫: 拦截命名路由 ${to.uri}，需要登录');
+      debugPrint('路由守卫: 拦截命名路由 ${to.uri}，需要登�?');
       router.pushNamed(name: '/login');
       return false;
     }
@@ -100,7 +100,7 @@ void initRouter() {
     ];
     
     if (protectedPageTypes.contains(toPageType) && !_isLoggedIn) {
-      debugPrint('页面类型守卫: 拦截页面类型 $toPageType，需要登录');
+      debugPrint('页面类型守卫: 拦截页面类型 $toPageType，需要登�?);
       // 这里不能直接 push LoginPage，因为会触发循环，所以用 pushNamed
       router.pushNamed(name: '/login');
       return false;
@@ -113,8 +113,8 @@ Future<bool> _confirmExit(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('退出确认'),
-      content: const Text('确定要退出应用吗？'),
+      title: const Text('退出确�?),
+      content: const Text('确定要退出应用吗�?),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, true),
@@ -175,22 +175,26 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // 创建抽屉路由实例
-  late final RouterProxy drawerRouter;
+  // 创建 GlobalKey �?DrawerStackController
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final DrawerStackController DrawerStackController;
 
   @override
   void initState() {
     super.initState();
     
-    // 初始化抽屉路由
-    drawerRouter = RouterProxy.getDrawerInstance(
-      stackId: 'main-drawer',
-      pageMap: {
-        '/': const DrawerHomePage(),
-        '/drawer-settings': const DrawerSettingsPage(),
-        '/drawer-profile': const DrawerProfilePage(),
-      },
-      drawerConfig: const DrawerConfig(
+    // 使用新的 DrawerStackController API
+    DrawerStackController = DrawerStackController(
+      scaffoldKey: _scaffoldKey,
+      routerProxy: RouterProxy.getDrawerInstance(
+        stackId: 'main-drawer',
+        pageMap: {
+          '/': const DrawerHomePage(),
+          '/drawer-settings': const DrawerSettingsPage(),
+          '/drawer-profile': const DrawerProfilePage(),
+        },
+      ),
+      config: const DrawerConfig(
         autoOpen: true,
         autoClose: true,
         isEndDrawer: true,
@@ -200,9 +204,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    // 不要在这里清理抽屉路由资源，因为 HomePage 可能会被重建
-    // 抽屉路由实例会在应用退出时自动清理
-    // RouterProxy.removeDrawerInstance('main-drawer');
+    // 清理 DrawerStackController 资源
+    DrawerStackController.dispose();
     super.dispose();
   }
 
@@ -214,21 +217,22 @@ class _HomePageState extends State<HomePage> {
       onResume: () => debugPrint('HomePage onResume'),
       onPause: () => debugPrint('HomePage onPause'),
       child: Scaffold(
+        key: _scaffoldKey, // 传入 GlobalKey
         appBar: AppBar(
           title: const Text('Router Pro 完整示例'),
           centerTitle: true,
           actions: [
-            // 登录状态切换按钮
+            // 登录状态切换按�?
             IconButton(
               icon: Icon(_isLoggedIn ? Icons.logout : Icons.login),
-              tooltip: _isLoggedIn ? '退出登录' : '登录',
+              tooltip: _isLoggedIn ? '退出登�? : '登录',
               onPressed: () {
                 setState(() {
                   toggleLoginStatus();
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(_isLoggedIn ? '已登录' : '已退出登录'),
+                    content: Text(_isLoggedIn ? '已登�? : '已退出登�?),
                     duration: const Duration(seconds: 1),
                   ),
                 );
@@ -236,15 +240,16 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        // 添加抽屉路由栈
-        endDrawer: SimpleDrawerWidget(
-          router: drawerRouter,
+        // 使用新的 DrawerNavigator Widget，样式由外层 Container 控制
+        endDrawer: Container(
           width: 300,
+          color: Colors.white,
+          child: DrawerNavigator(controller: DrawerStackController),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // 登录状态显示
+            // 登录状态显�?
             Card(
               color: _isLoggedIn ? Colors.green.shade50 : Colors.orange.shade50,
               child: Padding(
@@ -257,7 +262,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      _isLoggedIn ? '当前状态：已登录' : '当前状态：未登录',
+                      _isLoggedIn ? '当前状态：已登�? : '当前状态：未登�?,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -279,28 +284,29 @@ class _HomePageState extends State<HomePage> {
             _buildFeatureCard(
               icon: Icons.security,
               title: '路由守卫（命名路由）',
-              description: '演示命名路由拦截和权限验证',
+              description: '演示命名路由拦截和权限验�?,
               onTap: () => router.pushNamed(name: '/profile'),
             ),
             _buildFeatureCard(
               icon: Icons.shield,
               title: '页面类型守卫',
-              description: '演示 push(page: xxx) 方式的路由守卫',
+              description: '演示 push(page: xxx) 方式的路由守�?,
               onTap: () => router.push(page: const ProfileDetailPage()),
             ),
             _buildFeatureCard(
               icon: Icons.swap_calls,
-              title: '命名路由值回传',
+              title: '命名路由值回�?,
               description: '演示通过命名路由传递和接收数据',
               onTap: () => _showValueReturnDemo(context),
             ),
             _buildFeatureCard(
               icon: Icons.menu,
-              title: '抽屉路由栈',
-              description: '演示抽屉内的独立路由栈管理',
+              title: '抽屉路由�?,
+              description: '演示抽屉内的独立路由栈管�?,
               onTap: () {
-                // 打开抽屉并跳转到设置页
-                drawerRouter.pushNamed(name: '/drawer-settings');
+                // 打开抽屉并跳转到设置�?
+                // DrawerStackController.push(page: SettingsPage());
+                DrawerStackController.pushNamed(name: '/drawer-settings');
               },
             ),
             _buildFeatureCard(
@@ -310,15 +316,15 @@ class _HomePageState extends State<HomePage> {
               onTap: () => router.pushNamed(name: '/not-exist'),
             ),
             const SizedBox(height: 16),
-            _buildSectionTitle('🔗 路由解析器'),
+            _buildSectionTitle('🔗 路由解析�?),
             _buildFeatureCard(
               icon: Icons.link,
-              title: '增强路由解析器',
+              title: '增强路由解析�?,
               description: '演示路径参数、查询参数、路由别名等功能',
               onTap: () => router.push(page: const EnhancedParserDemoPage()),
             ),
             const SizedBox(height: 16),
-            _buildSectionTitle('⏱ 生命周期功能'),
+            _buildSectionTitle('�?生命周期功能'),
             _buildFeatureCard(
               icon: Icons.video_library,
               title: '视频播放生命周期',
@@ -326,17 +332,17 @@ class _HomePageState extends State<HomePage> {
               onTap: () => _showVideoLifecycleDemo(context),
             ),
             const SizedBox(height: 16),
-            _buildSectionTitle('👁 可见性检测'),
+            _buildSectionTitle('👁 可见性检�?),
             _buildFeatureCard(
               icon: Icons.visibility,
-              title: '可见性检测示例',
-              description: '演示列表项可见性监控',
+              title: '可见性检测示�?,
+              description: '演示列表项可见性监�?,
               onTap: () => router.pushNamed(name: '/visibility'),
             ),
             _buildFeatureCard(
               icon: Icons.image,
-              title: '懒加载图片',
-              description: '演示图片懒加载',
+              title: '懒加载图�?,
+              description: '演示图片懒加�?,
               onTap: () => router.pushNamed(name: '/lazy-image'),
             ),
             _buildFeatureCard(
@@ -407,7 +413,7 @@ class _HomePageState extends State<HomePage> {
             ListTile(
               leading: const Icon(Icons.layers),
               title: const Text('Standard 标准模式'),
-              subtitle: const Text('可创建多个实例'),
+              subtitle: const Text('可创建多个实�?),
               onTap: () {
                 Navigator.pop(context);
                 router.push(
@@ -419,11 +425,11 @@ class _HomePageState extends State<HomePage> {
             ListTile(
               leading: const Icon(Icons.vertical_align_top),
               title: const Text('SingleTop 栈顶复用'),
-              subtitle: const Text('栈顶已存在则更新参数（类似Android onNewIntent）'),
+              subtitle: const Text('栈顶已存在则更新参数（类似Android onNewIntent�?),
               onTap: () {
                 Navigator.pop(context);
                 router.push(
-                  page: DetailPage(title: '栈顶复用 - ${DateTime.now().second}秒'),
+                  page: DetailPage(title: '栈顶复用 - ${DateTime.now().second}�?),
                   launchMode: LaunchMode.singleTop,
                 );
               },
@@ -431,7 +437,7 @@ class _HomePageState extends State<HomePage> {
             ListTile(
               leading: const Icon(Icons.filter_1),
               title: const Text('SingleInstance 单例模式'),
-              subtitle: const Text('全栈唯一实例，清除上层页面'),
+              subtitle: const Text('全栈唯一实例，清除上层页�?),
               onTap: () {
                 Navigator.pop(context);
                 router.push(
@@ -460,7 +466,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ============ 详情页 ============
+// ============ 详情�?============
 class DetailPage extends StatelessWidget {
   final String title;
 
@@ -488,7 +494,7 @@ class DetailPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 router.push(
-                  page: DetailPage(title: '$title - 子页面'),
+                  page: DetailPage(title: '$title - 子页�?),
                 );
               },
               child: const Text('继续跳转'),
@@ -500,7 +506,7 @@ class DetailPage extends StatelessWidget {
   }
 }
 
-// ============ 登录页 ============
+// ============ 登录�?============
 class LoginPage extends StatelessWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -549,7 +555,7 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-// ============ 设置页 ============
+// ============ 设置�?============
 class SettingsPage extends StatelessWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
@@ -561,8 +567,8 @@ class SettingsPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // 返回时携带数据
-            router.pop('设置已保存');
+            // 返回时携带数�?
+            router.pop('设置已保�?);
           },
         ),
       ),
@@ -574,9 +580,9 @@ class SettingsPage extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                router.pop('用户点击了保存按钮');
+                router.pop('用户点击了保存按�?);
               },
-              child: const Text('保存并返回'),
+              child: const Text('保存并返�?),
             ),
           ],
         ),
@@ -592,7 +598,7 @@ class NotFoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('页面未找到')),
+      appBar: AppBar(title: const Text('页面未找�?)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -617,7 +623,7 @@ class NotFoundPage extends StatelessWidget {
   }
 }
 
-// ============ 视频播放演示页 ============
+// ============ 视频播放演示�?============
 class VideoPlayerDemoPage extends StatefulWidget {
   const VideoPlayerDemoPage({Key? key}) : super(key: key);
 
@@ -635,7 +641,7 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
       debugLabel: 'VideoPlayer',
       onResume: () {
         setState(() => _isPlaying = true);
-        debugPrint('视频开始播放');
+        debugPrint('视频开始播�?);
       },
       onPause: () {
         setState(() => _isPlaying = false);
@@ -673,7 +679,7 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
               ),
               const SizedBox(height: 20),
               Text(
-                _isPlaying ? '播放中...' : '已暂停',
+                _isPlaying ? '播放�?..' : '已暂�?,
                 style: const TextStyle(fontSize: 18),
               ),
               const SizedBox(height: 10),
@@ -690,7 +696,7 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
   }
 }
 
-// ============ 个人详情页（用于演示页面类型守卫）============
+// ============ 个人详情页（用于演示页面类型守卫�?===========
 class ProfileDetailPage extends StatelessWidget {
   const ProfileDetailPage({Key? key}) : super(key: key);
 
@@ -731,7 +737,7 @@ class ProfileDetailPage extends StatelessWidget {
   }
 }
 
-// ============ SingleInstance 演示页 ============
+// ============ SingleInstance 演示�?============
 class SingleInstanceDemoPage extends StatelessWidget {
   final String timestamp;
   
@@ -774,15 +780,15 @@ class SingleInstanceDemoPage extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               const Text(
-                '特点：',
+                '特点�?,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               const Text(
-                '• 全局唯一实例\n'
-                '• 已存在时更新参数\n'
-                '• 清除该页面上面的所有页面\n'
-                '• 适用于购物车、首页等场景',
+                '�?全局唯一实例\n'
+                '�?已存在时更新参数\n'
+                '�?清除该页面上面的所有页面\n'
+                '�?适用于购物车、首页等场景',
                 style: TextStyle(fontSize: 14),
                 textAlign: TextAlign.center,
               ),
@@ -805,7 +811,7 @@ class SingleInstanceDemoPage extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text('再次启动（会清除中间页面）'),
+                label: const Text('再次启动（会清除中间页面�?),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                 ),
@@ -818,7 +824,7 @@ class SingleInstanceDemoPage extends StatelessWidget {
   }
 }
 
-// ============ 中间页面（用于演示 SingleInstance 清除效果）============
+// ============ 中间页面（用于演�?SingleInstance 清除效果�?===========
 class IntermediatePage extends StatelessWidget {
   const IntermediatePage({Key? key}) : super(key: key);
 
@@ -839,12 +845,12 @@ class IntermediatePage extends StatelessWidget {
             const Icon(Icons.layers, size: 80, color: Colors.green),
             const SizedBox(height: 20),
             const Text(
-              '这是一个中间页面',
+              '这是一个中间页�?,
               style: TextStyle(fontSize: 20),
             ),
             const SizedBox(height: 10),
             const Text(
-              '当再次启动 SingleInstance 页面时\n这个页面会被清除',
+              '当再次启�?SingleInstance 页面时\n这个页面会被清除',
               style: TextStyle(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
@@ -853,7 +859,7 @@ class IntermediatePage extends StatelessWidget {
               onPressed: () {
                 router.push(page: const IntermediatePage());
               },
-              child: const Text('再添加一个中间页面'),
+              child: const Text('再添加一个中间页�?),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
@@ -885,7 +891,7 @@ class EnhancedParserDemoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('增强路由解析器示例'),
+        title: const Text('增强路由解析器示�?),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => router.pop(),
@@ -911,11 +917,11 @@ class EnhancedParserDemoPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '本示例演示 EnhancedParser 的功能：\n'
-                    '• 路径参数解析 (/user/:id)\n'
-                    '• 查询参数解析 (?key=value)\n'
-                    '• 路由别名 (/home -> /)\n'
-                    '• 混合使用',
+                    '本示例演�?EnhancedParser 的功能：\n'
+                    '�?路径参数解析 (/user/:id)\n'
+                    '�?查询参数解析 (?key=value)\n'
+                    '�?路由别名 (/home -> /)\n'
+                    '�?混合使用',
                     style: TextStyle(color: Colors.white),
                   ),
                 ],
@@ -959,7 +965,7 @@ class EnhancedParserDemoPage extends StatelessWidget {
             },
           ),
           _buildExampleCard(
-            title: '商品详情（带查询参数）',
+            title: '商品详情（带查询参数�?,
             description: '路径: /product/:category/:id?color=red',
             example: '示例: /product/electronics/456?color=red&size=large',
             onTap: () {
@@ -1006,7 +1012,7 @@ class EnhancedParserDemoPage extends StatelessWidget {
   }
 }
 
-// ============ 用户详情页（路径参数示例）============
+// ============ 用户详情页（路径参数示例�?===========
 class UserDetailPage extends StatelessWidget {
   final String userId;
 
@@ -1034,7 +1040,7 @@ class UserDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              '✅ 路径参数已成功解析',
+              '�?路径参数已成功解�?,
               style: TextStyle(color: Colors.green, fontSize: 16),
             ),
             const SizedBox(height: 10),
@@ -1057,7 +1063,7 @@ class UserDetailPage extends StatelessWidget {
   }
 }
 
-// ============ 商品详情页（路径参数 + 查询参数示例）============
+// ============ 商品详情页（路径参数 + 查询参数示例�?===========
 class ProductDetailPage extends StatelessWidget {
   final String category;
   final String productId;
@@ -1115,7 +1121,7 @@ class ProductDetailPage extends StatelessWidget {
               ],
               const SizedBox(height: 20),
               const Text(
-                '✅ 路径参数和查询参数已成功解析',
+                '�?路径参数和查询参数已成功解析',
                 style: TextStyle(color: Colors.green, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
@@ -1142,7 +1148,7 @@ class ProductDetailPage extends StatelessWidget {
   }
 }
 
-// ============ 搜索结果页（查询参数示例）============
+// ============ 搜索结果页（查询参数示例�?===========
 class SearchResultPage extends StatelessWidget {
   final String keyword;
   final int page;
@@ -1170,7 +1176,7 @@ class SearchResultPage extends StatelessWidget {
             const Icon(Icons.search, size: 80, color: Colors.blue),
             const SizedBox(height: 20),
             Text(
-              '关键词: $keyword',
+              '关键�? $keyword',
               style: const TextStyle(fontSize: 24),
             ),
             const SizedBox(height: 10),
@@ -1180,7 +1186,7 @@ class SearchResultPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              '✅ 查询参数已成功解析',
+              '�?查询参数已成功解�?,
               style: TextStyle(color: Colors.green, fontSize: 16),
             ),
             const SizedBox(height: 10),
@@ -1202,7 +1208,7 @@ class SearchResultPage extends StatelessWidget {
                         name: '/search?q=$keyword&page=${page - 1}',
                       );
                     },
-                    child: const Text('上一页'),
+                    child: const Text('上一�?),
                   ),
                 const SizedBox(width: 10),
                 ElevatedButton(
@@ -1211,7 +1217,7 @@ class SearchResultPage extends StatelessWidget {
                       name: '/search?q=$keyword&page=${page + 1}',
                     );
                   },
-                  child: const Text('下一页'),
+                  child: const Text('下一�?),
                 ),
               ],
             ),
@@ -1223,7 +1229,7 @@ class SearchResultPage extends StatelessWidget {
 }
 
 
-// ============ 抽屉路由栈页面 ============
+// ============ 抽屉路由栈页�?============
 
 /// 抽屉首页
 class DrawerHomePage extends StatelessWidget {
@@ -1231,7 +1237,8 @@ class DrawerHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    // 使用 InheritedDrawerStackController 获取 DrawerStackController
+    final DrawerStackController = InheritedDrawerStackController.of(context);
     
     return Column(
       children: [
@@ -1255,7 +1262,7 @@ class DrawerHomePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      '抽屉路由栈',
+                      '抽屉路由�?,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -1264,7 +1271,7 @@ class DrawerHomePage extends StatelessWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => drawerRouter.closeDrawerStack(),
+                      onPressed: () => DrawerStackController?.closeDrawer(),
                     ),
                   ],
                 ),
@@ -1289,42 +1296,42 @@ class DrawerHomePage extends StatelessWidget {
               _buildDrawerTile(
                 icon: Icons.settings,
                 title: '设置',
-                subtitle: '应用设置和偏好',
+                subtitle: '应用设置和偏�?,
                 onTap: () {
-                  drawerRouter.push(page: const DrawerSettingsPage());
+                  DrawerStackController?.push(page: const DrawerSettingsPage());
                 },
               ),
               _buildDrawerTile(
                 icon: Icons.person,
                 title: '个人资料',
-                subtitle: '查看和编辑个人信息',
+                subtitle: '查看和编辑个人信�?,
                 onTap: () {
-                  drawerRouter.push(page: const DrawerProfilePage());
+                  DrawerStackController?.push(page: const DrawerProfilePage());
                 },
               ),
               _buildDrawerTile(
                 icon: Icons.notifications,
                 title: '通知',
-                subtitle: '消息和提醒',
+                subtitle: '消息和提�?,
                 onTap: () {
-                  drawerRouter.push(page: const DrawerNotificationPage());
+                  DrawerStackController?.push(page: const DrawerNotificationPage());
                 },
               ),
               const Divider(),
               _buildDrawerTile(
                 icon: Icons.info,
                 title: '关于',
-                subtitle: '应用信息和版本',
+                subtitle: '应用信息和版�?,
                 onTap: () {
-                  drawerRouter.push(page: const DrawerAboutPage());
+                  DrawerStackController?.push(page: const DrawerAboutPage());
                 },
               ),
               _buildDrawerTile(
                 icon: Icons.help,
                 title: '帮助',
-                subtitle: '使用指南和常见问题',
+                subtitle: '使用指南和常见问�?,
                 onTap: () {
-                  drawerRouter.push(page: const DrawerHelpPage());
+                  DrawerStackController?.push(page: const DrawerHelpPage());
                 },
               ),
             ],
@@ -1350,13 +1357,14 @@ class DrawerHomePage extends StatelessWidget {
   }
 }
 
-/// 抽屉设置页
+/// 抽屉设置�?
 class DrawerSettingsPage extends StatelessWidget {
   const DrawerSettingsPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    // 使用 InheritedDrawerStackController 获取 DrawerStackController
+    final DrawerStackController = InheritedDrawerStackController.of(context);
     
     return Column(
       children: [
@@ -1364,12 +1372,12 @@ class DrawerSettingsPage extends StatelessWidget {
           title: const Text('设置'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => drawerRouter.pop(),
+            onPressed: () => DrawerStackController?.pop(),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.close),
-              onPressed: () => drawerRouter.closeDrawerStack(),
+              onPressed: () => DrawerStackController?.closeDrawer(),
             ),
           ],
         ),
@@ -1382,9 +1390,9 @@ class DrawerSettingsPage extends StatelessWidget {
                   _buildSettingTile(
                     icon: Icons.language,
                     title: '语言',
-                    subtitle: '简体中文',
+                    subtitle: '简体中�?,
                     onTap: () {
-                      drawerRouter.push(page: const DrawerLanguagePage());
+                      DrawerStackController?.push(page: const DrawerLanguagePage());
                     },
                   ),
                   _buildSettingTile(
@@ -1392,7 +1400,7 @@ class DrawerSettingsPage extends StatelessWidget {
                     title: '主题',
                     subtitle: '跟随系统',
                     onTap: () {
-                      drawerRouter.push(page: const DrawerThemePage());
+                      DrawerStackController?.push(page: const DrawerThemePage());
                     },
                   ),
                 ],
@@ -1405,15 +1413,15 @@ class DrawerSettingsPage extends StatelessWidget {
                     title: '隐私',
                     subtitle: '管理隐私选项',
                     onTap: () {
-                      drawerRouter.push(page: const DrawerPrivacyPage());
+                      DrawerStackController?.push(page: const DrawerPrivacyPage());
                     },
                   ),
                   _buildSettingTile(
                     icon: Icons.security,
                     title: '安全',
-                    subtitle: '密码和安全设置',
+                    subtitle: '密码和安全设�?,
                     onTap: () {
-                      drawerRouter.push(page: const DrawerSecurityPage());
+                      DrawerStackController?.push(page: const DrawerSecurityPage());
                     },
                   ),
                 ],
@@ -1464,13 +1472,14 @@ class DrawerSettingsPage extends StatelessWidget {
   }
 }
 
-/// 抽屉个人资料页
+/// 抽屉个人资料�?
 class DrawerProfilePage extends StatelessWidget {
   const DrawerProfilePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
+    // 使用 InheritedDrawerStackController 获取 DrawerStackController
+    final DrawerStackController = InheritedDrawerStackController.of(context);
     
     return Column(
       children: [
@@ -1478,13 +1487,13 @@ class DrawerProfilePage extends StatelessWidget {
           title: const Text('个人资料'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => drawerRouter.pop(),
+            onPressed: () => DrawerStackController?.pop(),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
-                drawerRouter.push(page: const DrawerEditProfilePage());
+                DrawerStackController?.push(page: const DrawerEditProfilePage());
               },
             ),
           ],
@@ -1502,7 +1511,7 @@ class DrawerProfilePage extends StatelessWidget {
               const SizedBox(height: 16),
               const Center(
                 child: Text(
-                  '用户名',
+                  '用户�?,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1514,7 +1523,7 @@ class DrawerProfilePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              _buildInfoCard('手机号', '+86 138 0000 0000'),
+              _buildInfoCard('手机�?, '+86 138 0000 0000'),
               _buildInfoCard('生日', '1990-01-01'),
               _buildInfoCard('地址', '北京市朝阳区'),
             ],
@@ -1547,8 +1556,8 @@ class DrawerNotificationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '通知', Icons.notifications);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '通知', Icons.notifications);
   }
 }
 
@@ -1557,8 +1566,8 @@ class DrawerAboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '关于', Icons.info);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '关于', Icons.info);
   }
 }
 
@@ -1567,8 +1576,8 @@ class DrawerHelpPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '帮助', Icons.help);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '帮助', Icons.help);
   }
 }
 
@@ -1577,8 +1586,8 @@ class DrawerLanguagePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '语言设置', Icons.language);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '语言设置', Icons.language);
   }
 }
 
@@ -1587,8 +1596,8 @@ class DrawerThemePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '主题设置', Icons.palette);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '主题设置', Icons.palette);
   }
 }
 
@@ -1597,8 +1606,8 @@ class DrawerPrivacyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '隐私设置', Icons.lock);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '隐私设置', Icons.lock);
   }
 }
 
@@ -1607,8 +1616,8 @@ class DrawerSecurityPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '安全设置', Icons.security);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '安全设置', Icons.security);
   }
 }
 
@@ -1617,19 +1626,19 @@ class DrawerEditProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-    return _buildSimplePage(drawerRouter, '编辑资料', Icons.edit);
+    final DrawerStackController = InheritedDrawerStackController.of(context);
+    return _buildSimplePage(DrawerStackController, '编辑资料', Icons.edit);
   }
 }
 
-Widget _buildSimplePage(RouterProxy router, String title, IconData icon) {
+Widget _buildSimplePage(DrawerStackController? router, String title, IconData icon) {
   return Column(
     children: [
       AppBar(
         title: Text(title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => router.pop(),
+          onPressed: () => router?.pop(),
         ),
       ),
       Expanded(
@@ -1645,7 +1654,7 @@ Widget _buildSimplePage(RouterProxy router, String title, IconData icon) {
               ),
               const SizedBox(height: 8),
               const Text(
-                '这是一个示例页面',
+                '这是一个示例页�?,
                 style: TextStyle(color: Colors.grey),
               ),
             ],

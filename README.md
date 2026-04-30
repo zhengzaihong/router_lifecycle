@@ -8,37 +8,46 @@ Language: English | [简体中文](README-ZH.md)
 
 ---
 
-## ✨ Why choose Router Pro?
+## ✨ Overview
 
-In Flutter development, pages often need to have life cycle capabilities (`onResume`,`onPause`,`onDestroy`) like Android's **Activity/Fragment** for lazy loading or improved performance experience.  
-However, Flutter's **StatelessWidget/StatefulWidget** does not natively support these features.
+**Router Pro** is a powerful Flutter routing framework that combines **Navigator 2.0** with **lifecycle awareness**, providing Android-like lifecycle capabilities and advanced routing features.
 
-**Router Pro provides a complete solution:**
+### 🎯 Core Features
 
-- 🔗 **Routing agent**: easier page jumps and rollback
-- ⏱ **Life-cycle perception**: Stateless/StatefulWidget changes Activity/Fragment in seconds
-- 🚀 **Route launch modes**: Support Standard, SingleTop, SingleInstance modes
-- 🛡️ **Route guards**: Support route interception for permission verification
-- 🎯 **Named route value return**: Support passing and receiving data through named routes
-- 🪶 **Decoupled design**: Routing and life cycle are used independently
-- 🌍 **Cross-platform support**: App & Web
+#### 🔄 Advanced Routing
+- **Launch Modes**: Standard, SingleTop, SingleInstance (like Android)
+- **Route Guards**: Intercept navigation for permission checks
+- **Named Routes**: Support path parameters (`:id`) and query parameters
+- **Value Return**: Pass data back from routes
+- **Drawer Router Stack**: Independent routing in drawers
+- **404 Handling**: Custom error pages
+
+#### ⏱️ Lifecycle Awareness
+- **Native-like Lifecycle**: `onCreate`, `onResume`, `onPause`, `onDestroy`
+- **Visibility Detection**: Track widget visibility in lists
+- **Lazy Loading**: Load content when visible
+- **Auto Play/Pause**: Control videos based on visibility
+
+#### 🎨 Developer Experience
+- **No BuildContext Required**: Navigate without context
+- **Type Safe**: Full Dart type safety
+- **Decoupled Design**: Use routing and lifecycle independently
+- **Cross Platform**: Works on App & Web
 
 ---
 
-## 🌟 characteristics are as
+## 🌟 Why Router Pro?
 
-- ✅ Flutter pages can also enjoy **Native Life Cycle Awareness**
-- ✅ Provide more elegant **route jump/close API**
-- ✅ **Decoupled design**: Routing and lifecycle can be used separately
-- ✅ Support **Cross-platform (App & Web)**
-- ✅ Support **Route Launch Modes** (Standard, SingleTop, SingleInstance)
-- ✅ Support **Named Route Value Return**
-- ✅ Support **Route Navigation Guards** (Interceptors)
-- ✅ Support **Custom 404 Error Page**
-- ✅ Support **Drawer Router Stack** (Independent drawer routing management)
-- ✅ Use routing without BuildContext dependency
+Flutter's **StatelessWidget/StatefulWidget** doesn't natively support lifecycle callbacks like Android's **Activity/Fragment**. This makes it challenging to:
+- Pause/resume videos when pages are hidden
+- Load data only when pages are visible
+- Clean up resources when pages are destroyed
 
-## 📦 install
+**Router Pro solves these problems** by providing a complete routing and lifecycle solution that feels natural to Android developers while embracing Flutter's declarative style.
+
+---
+
+## 📦 Installation
 
 Add to `pubspec.yaml`:
 
@@ -47,7 +56,7 @@ dependencies:
   router_pro: ^0.2.0
 ```
 
-import:
+Import:
 
 ```dart
 import 'package:router_pro/router_lib.dart';
@@ -62,7 +71,7 @@ import 'package:router_pro/router_lib.dart';
 ```dart
 RouterProxy router = RouterProxy.getInstance(
   pageMap: {'/': const Login()},
-  exitWindowStyle: _confirmExit,
+  exitWindow: _confirmExit,
   notFoundPage: const NotFoundPage(), // Optional: Custom 404 page
 );
 ```
@@ -521,7 +530,7 @@ Support creating independent router stacks within drawers, each with complete ro
 
 - ✅ **Independent Router Stack**: Drawer has its own page stack, doesn't affect main router
 - ✅ **Auto Refresh**: Automatically updates drawer display on push/pop
-- ✅ **Auto Binding**: No need to manually call `bindDrawerContext()`
+- ✅ **No Context Dependency**: Uses GlobalKey to manage drawer state, avoiding context binding issues
 - ✅ **Complete Features**: Supports route guards, launch modes, value return, etc.
 - ✅ **Multi-instance Support**: Can create multiple independent drawer router stacks
 
@@ -534,20 +543,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late final RouterProxy drawerRouter;
+  // 1. Create GlobalKey
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  late final DrawerStackController controller;
 
   @override
   void initState() {
     super.initState();
     
-    // Create drawer router instance
-    drawerRouter = RouterProxy.getDrawerInstance(
-      stackId: 'main-drawer',
-      pageMap: {
-        '/': DrawerHomePage(),
-        '/settings': DrawerSettingsPage(),
-      },
-      drawerConfig: DrawerConfig(
+    // 2. Create DrawerStackController with GlobalKey
+    controller = DrawerStackController(
+      scaffoldKey: scaffoldKey,
+      routerProxy: RouterProxy.getDrawerInstance(
+        stackId: 'main-drawer',
+        pageMap: {
+          '/': DrawerHomePage(),
+          '/settings': DrawerSettingsPage(),
+        },
+      ),
+      config: DrawerConfig(
         autoOpen: true,   // Auto open drawer on first push
         autoClose: true,  // Auto close drawer when stack is empty
         isEndDrawer: true, // Right drawer
@@ -558,23 +572,25 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void dispose() {
     // Clean up resources
-    RouterProxy.removeDrawerInstance('main-drawer');
+    controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: scaffoldKey, // 3. Pass GlobalKey to Scaffold
       appBar: AppBar(title: Text('Home')),
-      // Use SimpleDrawerWidget, auto handles context binding and refresh
-      endDrawer: SimpleDrawerWidget(
-        router: drawerRouter,
+      // 4. Use DrawerNavigator with custom styling
+      endDrawer: Container(
         width: 300,
+        color: Colors.white,
+        child: DrawerNavigator(controller: controller),
       ),
       body: ElevatedButton(
         onPressed: () {
-          // Open drawer and navigate to settings
-          drawerRouter.pushNamed(name: '/settings');
+          // 5. Direct call, no context needed
+          controller.push(page: DrawerSettingsPage());
         },
         child: Text('Open Drawer Settings'),
       ),
@@ -583,61 +599,57 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 ```
 
-### Three Wrapper Widgets
+### Drawer Pages
 
-#### 1. SimpleDrawerWidget (Recommended)
-
-Simplest usage:
+Access the controller inside drawer pages using `InheritedDrawerStackController`:
 
 ```dart
-endDrawer: SimpleDrawerWidget(
-  router: drawerRouter,
-  width: 300,
-),
-```
-
-#### 2. StyledDrawerWidget (Custom Styles)
-
-Supports more style customization:
-
-```dart
-endDrawer: StyledDrawerWidget(
-  router: drawerRouter,
-  width: 320,
-  borderRadius: BorderRadius.circular(16),
-  boxShadow: [BoxShadow(...)],
-),
-```
-
-#### 3. DrawerRouterWidget (Full Control)
-
-For complete control over child widgets:
-
-```dart
-endDrawer: DrawerRouterWidget(
-  router: drawerRouter,
-  width: 300,
-  child: CustomDrawerContent(),
-),
+class DrawerHomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Get controller from context
+    final controller = InheritedDrawerStackController.of(context);
+    
+    return Column(
+      children: [
+        AppBar(
+          title: Text('Drawer Menu'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.close),
+              onPressed: () => controller?.closeDrawer(),
+            ),
+          ],
+        ),
+        ListTile(
+          leading: Icon(Icons.settings),
+          title: Text('Settings'),
+          onTap: () => controller?.push(page: DrawerSettingsPage()),
+        ),
+      ],
+    );
+  }
+}
 ```
 
 ### Drawer Control Methods
 
 ```dart
-// Drawer router stack methods (for inside drawer)
-drawerRouter.openDrawerStack();      // Open drawer
-drawerRouter.closeDrawerStack();     // Close drawer
-drawerRouter.isDrawerStackOpen;      // Check if drawer is open
+// DrawerStackController methods
+controller.openDrawer();      // Open drawer
+controller.closeDrawer();     // Close drawer
+controller.isDrawerOpen;      // Check if drawer is open
+
+// Navigation methods (same as RouterProxy)
+controller.push(page: SettingsPage());
+controller.pushNamed(name: '/settings');
+controller.pop();
 
 // Main router stack methods (for controlling drawer from main page)
 router.openMainDrawer(isEndDrawer: true);   // Open right drawer
 router.closeMainDrawer(isEndDrawer: false); // Close left drawer
 router.isMainDrawerOpen(isEndDrawer: true); // Check if right drawer is open
 ```
-
-### Complete Example
-
-See [DRAWER_ROUTER_USAGE.md](DRAWER_ROUTER_USAGE.md) for more detailed examples and usage guide.
 
 ---
 
@@ -1017,7 +1029,7 @@ flutter run
 
 ## 🛠 other explanatory
 
-- `ExitWindowStyle`: Customizable prompt box to exit the program
+- `ExitWindow`: Customizable prompt box to exit the program
 - Web side: Support browser direct access, need to customize `RouteParser`
 - Complete API documentation: See source code comments
 
