@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
+import 'package:router_pro/wrapper/visibility_detector.dart';
 
-import 'VisibilityDetector.dart';
 
 ///
 /// author:郑再红

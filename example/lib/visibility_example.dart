@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:router_pro/wrapper/VisibilityDetector.dart';
+import 'package:router_pro/wrapper/visibility_detector.dart';
 
 /// VisibilityDetector 高级用法示例
 /// 演示可见性检测的各种应用场景
@@ -99,7 +99,7 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha(25),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
