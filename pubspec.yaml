@@ -2,8 +2,7 @@ name: router_pro
 description: Flutter routing and lifecycle toolkit with launch modes, guards, drawer stacks, and visibility awareness.
 version: 0.2.1
 homepage: https://github.com/zhengzaihong/router_lifecycle
-repository: https://github.com/zhengzaihong/router_lifecycle
-issue_tracker: https://github.com/zhengzaihong/router_lifecycle/issues
+
 
 platforms:
   windows:

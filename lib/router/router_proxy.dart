@@ -218,7 +218,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   ScaffoldState? _autoMainScaffoldState;
 
   /// 可用于动态路由实现跳转
-  RoutePathCallback? _RoutePathCallback;
+  RoutePathCallback? _routePathCallback;
 
   /// 移动端退出程序时自定义页面的回调（仅用于主路由栈）
   ExitWindow? _exitWindow;
@@ -256,7 +256,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
         _drawerConfig = drawerConfig,
         super() {
     _exitWindow = exitWindow;
-    _RoutePathCallback = pathCallback;
+    _routePathCallback = pathCallback;
     _notFoundPage = notFoundPage;
 
     // 只添加根页面到初始栈
@@ -846,11 +846,19 @@ class RouterProxy extends RouterDelegate<RouteInformation>
 
   @override
   Future<bool> popRoute() async {
-    // 首先检查当前的Navigator是否可以pop（例如，一个对话框或底部面板）
-    if (Navigator.of(navigatorKey.currentContext!).canPop()) {
-      Navigator.of(navigatorKey.currentContext!).pop();
+    final navigatorState = navigatorKey.currentState;
+    if (navigatorState == null) {
+      return Future.value(false);
+    }
+
+    // Pageless routes (dialogs, bottom sheets, etc.) should still be dismissed
+    // imperatively. Page-based routes must stay in sync with our declarative
+    // stack to avoid transient reinsertions during system back gestures.
+    if (_hasPagelessTopRoute()) {
+      navigatorState.pop();
       return Future.value(true);
     }
+
     // 如果不行，则尝试从我们自己的页面栈中pop一个页面
     if (canPop()) {
       _popAndOnResult(null);
@@ -861,7 +869,24 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     /// 如果页面栈也不能pop，则执行自定义的退出逻辑
     return _exitWindow == null
         ? Future.value(false)
-        : _exitWindow!.call(navigatorKey.currentContext!);
+        : _exitWindow!.call(navigatorState.context);
+  }
+
+  Route<dynamic>? _topNavigatorRoute() {
+    final navigatorState = navigatorKey.currentState;
+    if (navigatorState == null) return null;
+
+    Route<dynamic>? topRoute;
+    navigatorState.popUntil((route) {
+      topRoute = route;
+      return true;
+    });
+    return topRoute;
+  }
+
+  bool _hasPagelessTopRoute() {
+    final topRoute = _topNavigatorRoute();
+    return topRoute != null && topRoute.settings is! Page;
   }
 
   /// 检查页面栈是否可以pop
@@ -1066,7 +1091,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     var page = pageMap?[name];
     _location = name;
     if (custom && page == null) {
-      page = _RoutePathCallback
+      page = _routePathCallback
           ?.call(RouteInformation(uri: Uri.parse(_location!)));
     }
     if (page == null) {
