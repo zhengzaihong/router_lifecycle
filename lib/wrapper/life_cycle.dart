@@ -1,13 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:router_pro/wrapper/visibility_detector.dart';
 
-
 ///
 /// author:郑再红
 /// email:1096877329@qq.com
 /// date: 2023/12/22
 /// time: 14:17
 /// describe: 监听组件焦点，提供类似Android Activity的生命周期回调
+/// Adds Android-style lifecycle callbacks to a widget subtree.
 ///
 class LifeCycle extends StatefulWidget {
   const LifeCycle({
@@ -72,7 +72,7 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
     super.initState();
     _visibilityDetectorKey = UniqueKey();
     WidgetsBinding.instance.addObserver(this);
-    
+
     _debugLog('onCreate');
     widget.onCreate?.call();
 
@@ -85,7 +85,7 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(LifeCycle oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // 如果可见性阈值改变，重新评估可见状态
     if (oldWidget.visibilityThreshold != widget.visibilityThreshold) {
       _notifyVisibilityStatusChange(_currentVisibleFraction);
@@ -105,7 +105,7 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
 
     final isAppResumed = state == AppLifecycleState.resumed;
     final wasResumed = _isAppInForeground;
-    
+
     if (isAppResumed && !wasResumed) {
       _isAppInForeground = true;
       _debugLog('onResume (app resumed)');
@@ -140,17 +140,19 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
 
     final wasFullyVisible = _isWidgetVisible;
     final isFullyVisible = newVisibleFraction >= widget.visibilityThreshold;
-    
+
     if (!wasFullyVisible && isFullyVisible) {
       _isWidgetVisible = true;
-      _debugLog('onResume (widget visible: ${(newVisibleFraction * 100).toStringAsFixed(1)}%)');
+      _debugLog(
+          'onResume (widget visible: ${(newVisibleFraction * 100).toStringAsFixed(1)}%)');
       widget.onResume?.call();
     }
 
     final isFullyInvisible = newVisibleFraction < widget.visibilityThreshold;
     if (wasFullyVisible && isFullyInvisible && !_isExit) {
       _isWidgetVisible = false;
-      _debugLog('onPause (widget invisible: ${(newVisibleFraction * 100).toStringAsFixed(1)}%)');
+      _debugLog(
+          'onPause (widget invisible: ${(newVisibleFraction * 100).toStringAsFixed(1)}%)');
       widget.onPause?.call();
     }
   }

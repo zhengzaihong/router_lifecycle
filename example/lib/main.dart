@@ -37,20 +37,20 @@ void initRouter() {
     },
     notFoundPage: const NotFoundPage(),
     exitWindow: _confirmExit,
-    routePathCallBack: (routeInfo) {
+    routePathCallback: (routeInfo) {
       // 动态路由回调 - 用于处理路径参数
       final path = routeInfo.uri.path;
-      
+
       // 从 state 中获取解析后的参数
       final params = RouteParams.fromState(routeInfo.state);
-      
+
       if (params != null) {
         // /user/:id - 用户详情
         if (params.matchedPattern == '/user/:id') {
           final userId = params.getPathParam('id');
           return UserDetailPage(userId: userId!);
         }
-        
+
         // /product/:category/:id - 商品详情
         if (params.matchedPattern == '/product/:category/:id') {
           final category = params.getPathParam('category');
@@ -64,7 +64,7 @@ void initRouter() {
             size: size,
           );
         }
-        
+
         // /search?q=keyword&page=1 - 搜索结果
         if (path == '/search') {
           final keyword = params.getQueryParam('q');
@@ -75,7 +75,7 @@ void initRouter() {
           );
         }
       }
-      
+
       return null;
     },
   );
@@ -83,7 +83,7 @@ void initRouter() {
   // 添加命名路由守卫 - 用于 pushNamed 方式
   router.addRouteGuard((from, to) async {
     final protectedRoutes = ['/profile'];
-    
+
     if (protectedRoutes.contains(to.uri.toString()) && !_isLoggedIn) {
       debugPrint('路由守卫: 拦截命名路由 ${to.uri}，需要登录');
       router.pushNamed(name: '/login');
@@ -98,7 +98,7 @@ void initRouter() {
       VideoPlayerDemoPage,
       ProfileDetailPage,
     ];
-    
+
     if (protectedPageTypes.contains(toPageType) && !_isLoggedIn) {
       debugPrint('页面类型守卫: 拦截页面类型 $toPageType，需要登录');
       // 这里不能直接 push LoginPage，因为会触发循环，所以用 pushNamed
@@ -182,7 +182,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    
+
     // 使用新的 DrawerStackController API
     controller = DrawerStackController(
       scaffoldKey: _scaffoldKey,
@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             _buildSectionTitle('🚀 路由功能'),
             _buildFeatureCard(
               icon: Icons.layers,
@@ -440,7 +440,8 @@ class _HomePageState extends State<HomePage> {
               onTap: () {
                 Navigator.pop(context);
                 router.push(
-                  page: SingleInstanceDemoPage(timestamp: DateTime.now().toString()),
+                  page: SingleInstanceDemoPage(
+                      timestamp: DateTime.now().toString()),
                   launchMode: LaunchMode.singleInstance,
                 );
               },
@@ -455,7 +456,7 @@ class _HomePageState extends State<HomePage> {
     router.pushNamed(
       name: '/settings',
       onResult: (value) {
-        router.showAppSnackBar(message:value);
+        router.showAppSnackBar(message: value);
       },
     );
   }
@@ -670,7 +671,9 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
                 ),
                 child: Center(
                   child: Icon(
-                    _isPlaying ? Icons.play_circle_filled : Icons.pause_circle_filled,
+                    _isPlaying
+                        ? Icons.play_circle_filled
+                        : Icons.pause_circle_filled,
                     size: 64,
                     color: Colors.white,
                   ),
@@ -709,23 +712,23 @@ class ProfileDetailPage extends StatelessWidget {
           onPressed: () => router.pop(),
         ),
       ),
-      body: Center(
+      body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.person, size: 80, color: Colors.blue),
-            const SizedBox(height: 20),
-            const Text(
+            Icon(Icons.person, size: 80, color: Colors.blue),
+            SizedBox(height: 20),
+            Text(
               '个人详情页面',
               style: TextStyle(fontSize: 24),
             ),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               '此页面通过页面类型守卫保护',
               style: TextStyle(color: Colors.grey),
             ),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               '使用 router.push(page: ProfileDetailPage()) 跳转',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
@@ -739,7 +742,7 @@ class ProfileDetailPage extends StatelessWidget {
 // ============ SingleInstance 演示页 ============
 class SingleInstanceDemoPage extends StatelessWidget {
   final String timestamp;
-  
+
   const SingleInstanceDemoPage({
     Key? key,
     required this.timestamp,
@@ -1226,8 +1229,6 @@ class SearchResultPage extends StatelessWidget {
     );
   }
 }
-
-
 // ============ 抽屉路由栈页面 ============
 
 /// 抽屉首页
@@ -1238,7 +1239,7 @@ class DrawerHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     // 使用 InheritedDrawerStackController 获取 DrawerStackController
     final controller = InheritedDrawerStackController.of(context);
-    
+
     return Column(
       children: [
         // 抽屉头部
@@ -1286,7 +1287,7 @@ class DrawerHomePage extends StatelessWidget {
             ),
           ),
         ),
-        
+
         // 菜单列表
         Expanded(
           child: ListView(
@@ -1364,7 +1365,7 @@ class DrawerSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // 使用 InheritedDrawerStackController 获取 DrawerStackController
     final controller = InheritedDrawerStackController.of(context);
-    
+
     return Column(
       children: [
         AppBar(
@@ -1479,7 +1480,7 @@ class DrawerProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     // 使用 InheritedDrawerStackController 获取 DrawerStackController
     final controller = InheritedDrawerStackController.of(context);
-    
+
     return Column(
       children: [
         AppBar(
@@ -1630,7 +1631,8 @@ class DrawerEditProfilePage extends StatelessWidget {
   }
 }
 
-Widget _buildSimplePage(DrawerStackController? router, String title, IconData icon) {
+Widget _buildSimplePage(
+    DrawerStackController? router, String title, IconData icon) {
   return Column(
     children: [
       AppBar(
@@ -1649,7 +1651,8 @@ Widget _buildSimplePage(DrawerStackController? router, String title, IconData ic
               const SizedBox(height: 16),
               Text(
                 title,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(

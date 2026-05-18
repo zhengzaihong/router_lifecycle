@@ -53,7 +53,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  router_pro: ^0.2.0
+  router_pro: ^0.2.1
 ```
 
 Import:
@@ -651,6 +651,8 @@ router.closeMainDrawer(isEndDrawer: false); // Close left drawer
 router.isMainDrawerOpen(isEndDrawer: true); // Check if right drawer is open
 ```
 
+Main-stack drawer methods now auto-bind to the current page's `Scaffold`. `bindMainScaffoldKey(...)` remains available when you want explicit control.
+
 ---
 
 ## ⚡ Feature 5: Lifecycle Awareness
@@ -981,21 +983,21 @@ LifeCycle(
 
 ## 🔄 Migration Guide
 
-### Upgrading from 0.1.x to 0.2.0
+### Upgrading to 0.2.1
 
-Version 0.2.0 is **fully backward compatible**. All existing code works without modifications.
+Version 0.2.1 keeps the `0.2.x` API surface intact while tightening SDK requirements to match the APIs used by the package.
 
-**New Features (optional):**
-- Route launch modes (`launchMode` parameter)
-- Route navigation guards (`addRouteGuard` method)
-- Named route value return (`onResult` in `pushNamed`)
-- Custom 404 page (`notFoundPage` parameter)
+**Release highlights:**
+- Main-stack drawer helpers now auto-bind to the current page's `Scaffold`
+- Deprecated Navigator callback usage has been replaced with current APIs
+- Package metadata and example code have been cleaned up for publishing
+- Minimum supported environment is now **Dart 3.4** and **Flutter 3.22**
 
 **Upgrade Steps:**
 ```yaml
 # Update pubspec.yaml
 dependencies:
-  router_pro: ^0.2.0
+  router_pro: ^0.2.1
 ```
 
 ```bash
@@ -1031,6 +1033,12 @@ flutter run
 ---
 
 ## 📄 Changelog
+
+### v0.2.1
+- Added automatic main-stack drawer `Scaffold` binding while preserving `bindMainScaffoldKey(...)`
+- Replaced deprecated Navigator page-removal hooks with current page callbacks
+- Updated visibility clipping to use current Flutter rendering APIs
+- Cleaned up package comments, example code, and publishing metadata
 
 ### v0.2.0
 - ✅ Added route launch modes (Standard, SingleTop, SingleInstance)

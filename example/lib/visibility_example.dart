@@ -17,7 +17,8 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
 
   void _addLog(String message) {
     setState(() {
-      _visibilityLogs.insert(0, '${DateTime.now().toString().substring(11, 19)} - $message');
+      _visibilityLogs.insert(
+          0, '${DateTime.now().toString().substring(11, 19)} - $message');
       if (_visibilityLogs.length > 10) {
         _visibilityLogs.removeLast();
       }
@@ -59,7 +60,7 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
               ],
             ),
           ),
-          
+
           // 可滚动列表
           Expanded(
             child: ListView.builder(
@@ -76,7 +77,7 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
 
   Widget _buildVisibilityItem(int index) {
     final key = Key('item-$index');
-    
+
     return VisibilityDetector(
       key: key,
       onVisibilityChanged: (info) {
@@ -85,7 +86,8 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
           _addLog('Item $index 完全可见');
           setState(() => _visibleItemCount++);
         } else if (info.isPartiallyVisible) {
-          _addLog('Item $index 部分可见 (${(info.visibleFraction * 100).toStringAsFixed(0)}%)');
+          _addLog(
+              'Item $index 部分可见 (${(info.visibleFraction * 100).toStringAsFixed(0)}%)');
         } else if (info.isInvisible) {
           _addLog('Item $index 不可见');
           setState(() => _visibleItemCount--);
@@ -154,7 +156,8 @@ class _LazyImageExampleState extends State<LazyImageExample> {
             key: Key('image-$index'),
             onVisibilityChanged: (info) {
               // 当图片50%可见时开始加载
-              if (info.visibleFraction >= 0.5 && !(_loadedImages[index] ?? false)) {
+              if (info.visibleFraction >= 0.5 &&
+                  !(_loadedImages[index] ?? false)) {
                 setState(() {
                   _loadedImages[index] = true;
                 });
@@ -264,7 +267,8 @@ class ExposureTrackingExample extends StatefulWidget {
   const ExposureTrackingExample({Key? key}) : super(key: key);
 
   @override
-  State<ExposureTrackingExample> createState() => _ExposureTrackingExampleState();
+  State<ExposureTrackingExample> createState() =>
+      _ExposureTrackingExampleState();
 }
 
 class _ExposureTrackingExampleState extends State<ExposureTrackingExample> {
@@ -276,7 +280,7 @@ class _ExposureTrackingExampleState extends State<ExposureTrackingExample> {
       _exposureCounts[index] = (_exposureCounts[index] ?? 0) + 1;
       _lastExposureTime[index] = DateTime.now();
     });
-    
+
     // 这里可以发送曝光数据到服务器
     debugPrint('Item $index 曝光次数: ${_exposureCounts[index]}');
   }

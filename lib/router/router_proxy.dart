@@ -13,8 +13,8 @@ import 'drawer_config.dart';
 /// describe 基于路由2.0实现界面跳转
 /// 支持1.0中的路由传值，回传取值
 /// 支持多路由栈架构（主路由栈 + 抽屉路由栈）
-///
-///
+/// A Navigator 2.0 based router with support for route stacks, guards,
+/// drawer stacks, and lifecycle-friendly helpers.
 // ============ 主路由栈使用示例 ============
 //
 // void initRouter() {
@@ -67,7 +67,7 @@ import 'drawer_config.dart';
 //   @override
 //   void initState() {
 //     super.initState();
-//     
+//
 //     // 创建抽屉路由实例
 //     drawerRouter = RouterProxy.getDrawerInstance(
 //       stackId: 'main-drawer',
@@ -94,10 +94,8 @@ import 'drawer_config.dart';
 //   Widget build(BuildContext context) {
 //     return Scaffold(
 //       appBar: AppBar(title: Text('主页')),
-//       // 使用 SimpleDrawerWidget，自动处理 context 绑定和刷新
-//       endDrawer: SimpleDrawerWidget(
+//       endDrawer: DrawerNavigator(
 //         router: drawerRouter,
-//         width: 300,
 //       ),
 //       body: ElevatedButton(
 //         onPressed: () {
@@ -114,8 +112,8 @@ import 'drawer_config.dart';
 // class DrawerHomePage extends StatelessWidget {
 //   @override
 //   Widget build(BuildContext context) {
-//     final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
-//     
+//     final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer'); //子页面中可以 InheritedDrawerStackController.of(context);
+//
 //     return Column(
 //       children: [
 //         AppBar(
@@ -137,19 +135,7 @@ import 'drawer_config.dart';
 //   }
 // }
 //
-// ============ 抽屉路由栈特性 ============
-//
-// 1. 自动刷新：push/pop 时自动更新抽屉显示
-// 2. 自动绑定：SimpleDrawerWidget 自动处理 context 绑定
-// 3. 完整功能：支持路由守卫、启动模式、值回传等
-// 4. 多实例：可创建多个独立的抽屉路由栈
-//
-// 三种封装 Widget：
-// - SimpleDrawerWidget：最简单，推荐使用
-// - StyledDrawerWidget：支持自定义样式
-// - DrawerRouterWidget：完全自定义子组件
-//
-// 查看完整文档：DRAWER_ROUTER_USAGE.md
+
 //
 // ============ exitWindow 示例 ============
 //
@@ -174,67 +160,72 @@ import 'drawer_config.dart';
 //     return result ?? true;
 //   }
 
-typedef RoutePathCallBack = Widget? Function(RouteInformation routeInformation);
+typedef RoutePathCallback = Widget? Function(RouteInformation routeInformation);
 typedef ExitWindow = Future<bool> Function(BuildContext context);
-typedef NavigateToTargetCallBack = void Function(BuildContext context, Widget? page);
-typedef ResultCallBack = void Function(dynamic result);
-typedef RouteGuard = Future<bool> Function(RouteInformation from, RouteInformation to);
-typedef PageTypeGuard = Future<bool> Function(Type? fromPageType, Type toPageType);
+typedef ResultCallback = void Function(dynamic result);
+typedef RouteGuard = Future<bool> Function(
+    RouteInformation from, RouteInformation to);
+typedef PageTypeGuard = Future<bool> Function(
+    Type? fromPageType, Type toPageType);
 
 /// 路由启动模式
 enum LaunchMode {
   /// 标准模式：允许同一页面多个实例存在
   standard,
+
   /// 栈顶复用：如果目标页面已在栈顶，则不创建新实例
   singleTop,
+
   /// 单例模式：整个栈中只保留一个实例，如果已存在则移到栈顶
   singleInstance,
 }
 
 class RouterProxy extends RouterDelegate<RouteInformation>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<RouteInformation> {
-  
   // ========== 静态管理 ==========
-  
+
   /// 主路由实例（单例）
   static RouterProxy? _mainInstance;
-  
+
   /// 抽屉路由栈实例（多实例，按 stackId 管理）
   static final Map<String, RouterProxy> _drawerInstances = {};
-  
+
   // ========== 实例属性 ==========
-  
+
   /// 路由栈标识
   final String stackId;
-  
+
   /// 是否为主路由栈
   final bool isMainStack;
-  
+
   /// 是否为抽屉路由栈
   final bool isDrawerStack;
-  
+
   /// NavigatorKey（每个栈独立）
   final GlobalKey<NavigatorState> _navigatorKey;
-  
+
   /// 抽屉配置（仅用于抽屉栈）
   DrawerConfig? _drawerConfig;
-  
+
   /// 抽屉上下文（仅用于抽屉栈）
   /// 注意：这是 Scaffold 子组件的 context，不是根 context
   BuildContext? _drawerContext;
-  
+
+  /// Main stack Scaffold key, used by main drawer control methods.
+  GlobalKey<ScaffoldState>? _mainScaffoldKey;
+
+  /// Auto-bound ScaffoldState for the current main-stack page.
+  ScaffoldState? _autoMainScaffoldState;
+
   /// 可用于动态路由实现跳转
-  RoutePathCallBack? _routePathCallBack;
+  RoutePathCallback? _RoutePathCallback;
 
   /// 移动端退出程序时自定义页面的回调（仅用于主路由栈）
   ExitWindow? _exitWindow;
 
-  /// 特定页面跳转(非实际跳转)的回调, 例如切换底部Tab（仅用于主路由栈）
-  NavigateToTargetCallBack? _navigateToTargetCallBack;
-
   /// 路由导航守卫
   final List<RouteGuard> _routeGuards = [];
-  
+
   /// 页面类型导航守卫
   final List<PageTypeGuard> _pageTypeGuards = [];
 
@@ -244,16 +235,10 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 当前路由的名称 用web浏览器中
   String? _location;
 
-  /// 用于非页面跳转的目标页面队列（仅用于主路由栈）
-  final List<dynamic> _targetPageQueue = [];
-  int _maxQueue = 30;
-
   /// 具体的页面集
-  final List<MaterialPage> _pages = [];
-  final Map<int,ResultCallBack?> _result = {};
-
-  /// 通知特定的页面 ValueListenableBuilder（仅用于主路由栈）
-  ValueNotifier<Widget?> currentTargetPage = ValueNotifier(null);
+  final List<_RouterPageEntry> _pages = [];
+  final Map<int, ResultCallback?> _result = {};
+  final Map<int, Object?> _pendingPopResults = {};
 
   /// 404错误页面
   Widget? _notFoundPage;
@@ -264,46 +249,41 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     this.isDrawerStack = false,
     DrawerConfig? drawerConfig,
     ExitWindow? exitWindow,
-    RoutePathCallBack? routePathCallBack,
-    NavigateToTargetCallBack? navigateToTargetCallBack,
+    RoutePathCallback? pathCallback,
     this.pageMap,
-    int maxQueue = 30,
     Widget? notFoundPage,
-  }) : _navigatorKey = GlobalKey<NavigatorState>(debugLabel: stackId),
-       _drawerConfig = drawerConfig,
-       super() {
+  })  : _navigatorKey = GlobalKey<NavigatorState>(debugLabel: stackId),
+        _drawerConfig = drawerConfig,
+        super() {
     _exitWindow = exitWindow;
-    _routePathCallBack = routePathCallBack;
-    _navigateToTargetCallBack = navigateToTargetCallBack;
-    _maxQueue = maxQueue;
+    _RoutePathCallback = pathCallback;
     _notFoundPage = notFoundPage;
-    
+
     // 只添加根页面到初始栈
     if (pageMap != null && pageMap!.containsKey('/')) {
-      _pages.add(MaterialPage(child: pageMap!['/']));
+      _pages.add(_createPageEntry(page: pageMap!['/']));
       _location = '/';
     }
   }
 
   /// 获取主路由实例（单例）
-  /// 
+  ///
   /// 用于应用的主路由导航
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final router = RouterProxy.getInstance(
   ///   pageMap: {'/': HomePage()},
   /// );
-  /// 
+  ///
   /// MaterialApp.router(
   ///   routerDelegate: router,
   ///   routeInformationParser: router.defaultParser(),
   /// );
   /// ```
   static RouterProxy getInstance({
-    RoutePathCallBack? routePathCallBack,
+    RoutePathCallback? routePathCallback,
     ExitWindow? exitWindow,
-    NavigateToTargetCallBack? navigateToTargetCallBack,
     Map? pageMap,
     Widget? notFoundPage,
   }) {
@@ -311,9 +291,8 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       stackId: 'main',
       isMainStack: true,
       isDrawerStack: false,
-      routePathCallBack: routePathCallBack,
+      pathCallback: routePathCallback,
       exitWindow: exitWindow,
-      navigateToTargetCallBack: navigateToTargetCallBack,
       pageMap: pageMap,
       notFoundPage: notFoundPage,
     );
@@ -321,14 +300,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 获取抽屉路由实例（多实例）
-  /// 
+  ///
   /// 用于管理抽屉内的路由栈，支持多个独立的抽屉路由栈
-  /// 
+  ///
   /// 参数：
   /// - [stackId]: 路由栈标识，用于区分不同的抽屉路由栈
   /// - [pageMap]: 静态路由映射
   /// - [drawerConfig]: 抽屉配置
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final drawerRouter = RouterProxy.getDrawerInstance(
@@ -340,17 +319,17 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   ///     isEndDrawer: true,
   ///   ),
   /// );
-  /// 
+  ///
   /// Scaffold(
   ///   endDrawer: Container(
   ///     width: 300,
   ///     child: drawerRouter.build(context),
   ///   ),
   /// );
-  /// 
+  ///
   /// // 绑定 Scaffold 的 context（重要！）
   /// drawerRouter.bindDrawerContext(context);
-  /// 
+  ///
   /// // 使用
   /// drawerRouter.push(page: SettingsPage());
   /// ```
@@ -381,7 +360,6 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 移除抽屉路由实例
-  /// 
   /// 当不再需要某个抽屉路由栈时，调用此方法释放资源
   static void removeDrawerInstance(String stackId) {
     final instance = _drawerInstances[stackId];
@@ -400,12 +378,71 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     return const CustomParser();
   }
 
+  MaterialPage _createMaterialPage({
+    required Widget page,
+    String? name,
+    Object? arguments,
+    String? restorationId,
+    bool maintainState = true,
+    bool fullscreenDialog = false,
+    bool allowSnapshotting = true,
+    required PopInvokedWithResultCallback<dynamic> onPopInvoked,
+  }) {
+    final pageChild =
+        isMainStack ? _MainStackPageBinding(router: this, child: page) : page;
+
+    return MaterialPage(
+      child: pageChild,
+      name: name,
+      arguments: arguments,
+      restorationId: restorationId,
+      maintainState: maintainState,
+      fullscreenDialog: fullscreenDialog,
+      allowSnapshotting: allowSnapshotting,
+      onPopInvoked: onPopInvoked,
+    );
+  }
+
+  _RouterPageEntry _createPageEntry({
+    required Widget page,
+    String? name,
+    Object? arguments,
+    String? restorationId,
+    bool maintainState = true,
+    bool fullscreenDialog = false,
+    bool allowSnapshotting = true,
+  }) {
+    late final MaterialPage materialPage;
+    materialPage = _createMaterialPage(
+      page: page,
+      name: name,
+      arguments: arguments,
+      restorationId: restorationId,
+      maintainState: maintainState,
+      fullscreenDialog: fullscreenDialog,
+      allowSnapshotting: allowSnapshotting,
+      onPopInvoked: (didPop, result) {
+        if (didPop) {
+          _pendingPopResults[materialPage.hashCode] = result;
+        }
+      },
+    );
+
+    return _RouterPageEntry(
+      page: page,
+      materialPage: materialPage,
+    );
+  }
+
+  List<MaterialPage> get _materialPages =>
+      _pages.map((entry) => entry.materialPage).toList(growable: false);
+
   // ========== 抽屉相关方法（仅用于抽屉栈）==========
-  
+
   /// 绑定抽屉上下文（仅抽屉路由栈可用）
-  /// 
+  ///
   /// 重要：必须传入 Scaffold 子组件的 context，不是根 context
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// Scaffold(
@@ -425,18 +462,77 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     if (isDrawerStack) {
       _drawerContext = context;
     } else {
-      debugPrint('Warning: bindDrawerContext() should only be called on drawer stack');
+      debugPrint(
+          'Warning: bindDrawerContext() should only be called on drawer stack');
+    }
+  }
+
+  /// Explicitly binds the [ScaffoldState] used by main drawer helpers.
+  ///
+  /// Main-stack drawer helpers auto-bind to the current page when possible.
+  /// Use this method only when you want to override that behavior.
+  void bindMainScaffoldKey(GlobalKey<ScaffoldState> scaffoldKey) {
+    if (isMainStack) {
+      _mainScaffoldKey = scaffoldKey;
+    } else {
+      debugPrint(
+          'Warning: bindMainScaffoldKey() should only be called on main stack');
+    }
+  }
+
+  void _bindAutoMainScaffoldState(ScaffoldState? scaffoldState) {
+    if (isMainStack) {
+      _autoMainScaffoldState = scaffoldState;
+    }
+  }
+
+  void _unbindAutoMainScaffoldState(ScaffoldState scaffoldState) {
+    if (identical(_autoMainScaffoldState, scaffoldState)) {
+      _autoMainScaffoldState = null;
+    }
+  }
+
+  ScaffoldState? get _mainScaffoldState =>
+      _mainScaffoldKey?.currentState ?? _autoMainScaffoldState;
+
+  void _syncLocationWithTopPage() {
+    _location = _pages.isEmpty ? null : _pages.last.materialPage.name;
+  }
+
+  void _removePageEntryAt(int index, [Object? result]) {
+    final pageEntry = _pages.removeAt(index);
+    _result[pageEntry.materialPage.hashCode]?.call(result);
+    _result.remove(pageEntry.materialPage.hashCode);
+    _pendingPopResults.remove(pageEntry.materialPage.hashCode);
+    _syncLocationWithTopPage();
+  }
+
+  void _handleDidRemovePage(Page<Object?> page) {
+    final index = _pages.indexWhere(
+      (entry) => identical(entry.materialPage, page),
+    );
+    if (index == -1) return;
+
+    final result = _pendingPopResults[page.hashCode];
+    _removePageEntryAt(index, result);
+    notify();
+
+    if (isDrawerStack &&
+        _pages.length <= 1 &&
+        _drawerConfig?.autoClose == true) {
+      closeDrawerStack();
     }
   }
 
   /// 配置抽屉行为（仅抽屉路由栈可用）
-  /// 
+  ///
   /// 可以在运行时修改抽屉配置
   void configureDrawer(DrawerConfig config) {
     if (isDrawerStack) {
       _drawerConfig = config;
     } else {
-      debugPrint('Warning: configureDrawer() should only be called on drawer stack');
+      debugPrint(
+          'Warning: configureDrawer() should only be called on drawer stack');
     }
   }
 
@@ -444,9 +540,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   DrawerConfig? get drawerConfig => _drawerConfig;
 
   /// 打开抽屉（仅抽屉路由栈可用）
-  /// 
+  ///
   /// 手动打开抽屉，通常在自动打开被禁用时使用
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
@@ -454,12 +550,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// ```
   void openDrawerStack() {
     if (!isDrawerStack) {
-      debugPrint('Warning: openDrawerStack() should only be called on drawer stack');
+      debugPrint(
+          'Warning: openDrawerStack() should only be called on drawer stack');
       return;
     }
-    
+
     if (_drawerContext == null) {
-      debugPrint('Warning: Drawer context not bound. Call bindDrawerContext() first.');
+      debugPrint(
+          'Warning: Drawer context not bound. Call bindDrawerContext() first.');
       return;
     }
 
@@ -479,9 +577,9 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 关闭抽屉（仅抽屉路由栈可用）
-  /// 
+  ///
   /// 手动关闭抽屉，通常在自动关闭被禁用时使用
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final drawerRouter = RouterProxy.getDrawerInstance(stackId: 'main-drawer');
@@ -489,12 +587,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// ```
   void closeDrawerStack() {
     if (!isDrawerStack) {
-      debugPrint('Warning: closeDrawerStack() should only be called on drawer stack');
+      debugPrint(
+          'Warning: closeDrawerStack() should only be called on drawer stack');
       return;
     }
-    
+
     if (_drawerContext == null) {
-      debugPrint('Warning: Drawer context not bound. Call bindDrawerContext() first.');
+      debugPrint(
+          'Warning: Drawer context not bound. Call bindDrawerContext() first.');
       return;
     }
 
@@ -516,7 +616,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 检查抽屉是否打开（仅抽屉路由栈可用）
   bool get isDrawerStackOpen {
     if (!isDrawerStack || _drawerContext == null) return false;
-    
+
     try {
       if (_drawerConfig!.isEndDrawer) {
         return Scaffold.of(_drawerContext!).isEndDrawerOpen;
@@ -529,14 +629,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   // ========== 主路由栈的抽屉控制方法 ==========
-  
+
   /// 打开主页面的抽屉（主路由栈可用）
-  /// 
+  ///
   /// 用于主路由栈控制 Scaffold 的抽屉
-  /// 
+  ///
   /// 参数：
   /// - [isEndDrawer]: true 表示右侧抽屉，false 表示左侧抽屉
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final router = RouterProxy.getInstance();
@@ -545,23 +645,26 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// ```
   void openMainDrawer({bool isEndDrawer = false}) {
     if (!isMainStack) {
-      debugPrint('Warning: openMainDrawer() should only be called on main stack');
+      debugPrint(
+          'Warning: openMainDrawer() should only be called on main stack');
       return;
     }
-    
-    if (_context == null) {
-      debugPrint('Warning: Context not available');
+
+    final state = _mainScaffoldState;
+    if (state == null) {
+      debugPrint(
+          'Warning: Main ScaffoldState not available. Ensure the current page contains a Scaffold, or call bindMainScaffoldKey() explicitly.');
       return;
     }
 
     try {
       if (isEndDrawer) {
-        if (!Scaffold.of(_context!).isEndDrawerOpen) {
-          Scaffold.of(_context!).openEndDrawer();
+        if (!state.isEndDrawerOpen) {
+          state.openEndDrawer();
         }
       } else {
-        if (!Scaffold.of(_context!).isDrawerOpen) {
-          Scaffold.of(_context!).openDrawer();
+        if (!state.isDrawerOpen) {
+          state.openDrawer();
         }
       }
     } catch (e) {
@@ -570,12 +673,12 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 关闭主页面的抽屉（主路由栈可用）
-  /// 
+  ///
   /// 用于主路由栈控制 Scaffold 的抽屉
-  /// 
+  ///
   /// 参数：
   /// - [isEndDrawer]: true 表示右侧抽屉，false 表示左侧抽屉
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final router = RouterProxy.getInstance();
@@ -584,23 +687,26 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// ```
   void closeMainDrawer({bool isEndDrawer = false}) {
     if (!isMainStack) {
-      debugPrint('Warning: closeMainDrawer() should only be called on main stack');
+      debugPrint(
+          'Warning: closeMainDrawer() should only be called on main stack');
       return;
     }
-    
-    if (_context == null) {
-      debugPrint('Warning: Context not available');
+
+    final state = _mainScaffoldState;
+    if (state == null) {
+      debugPrint(
+          'Warning: Main ScaffoldState not available. Ensure the current page contains a Scaffold, or call bindMainScaffoldKey() explicitly.');
       return;
     }
 
     try {
       if (isEndDrawer) {
-        if (Scaffold.of(_context!).isEndDrawerOpen) {
-          Scaffold.of(_context!).closeEndDrawer();
+        if (state.isEndDrawerOpen) {
+          state.closeEndDrawer();
         }
       } else {
-        if (Scaffold.of(_context!).isDrawerOpen) {
-          Scaffold.of(_context!).closeDrawer();
+        if (state.isDrawerOpen) {
+          state.closeDrawer();
         }
       }
     } catch (e) {
@@ -609,10 +715,10 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 检查主页面的抽屉是否打开（主路由栈可用）
-  /// 
+  ///
   /// 参数：
   /// - [isEndDrawer]: true 表示检查右侧抽屉，false 表示检查左侧抽屉
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// final router = RouterProxy.getInstance();
@@ -621,13 +727,14 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// }
   /// ```
   bool isMainDrawerOpen({bool isEndDrawer = false}) {
-    if (!isMainStack || _context == null) return false;
-    
+    final state = _mainScaffoldState;
+    if (!isMainStack || state == null) return false;
+
     try {
       if (isEndDrawer) {
-        return Scaffold.of(_context!).isEndDrawerOpen;
+        return state.isEndDrawerOpen;
       } else {
-        return Scaffold.of(_context!).isDrawerOpen;
+        return state.isDrawerOpen;
       }
     } catch (e) {
       return false;
@@ -649,7 +756,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   void clearRouteGuards() {
     _routeGuards.clear();
   }
-  
+
   /// 添加页面类型守卫
   /// 用于 push(page: xxx) 方式的导航守卫
   /// 守卫会在路由跳转前执行，返回true允许跳转，false拦截跳转
@@ -668,7 +775,8 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 执行路由守卫检查
-  Future<bool> _checkRouteGuards(RouteInformation from, RouteInformation to) async {
+  Future<bool> _checkRouteGuards(
+      RouteInformation from, RouteInformation to) async {
     for (var guard in _routeGuards) {
       final result = await guard(from, to);
       if (!result) {
@@ -677,7 +785,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     }
     return true;
   }
-  
+
   /// 执行页面类型守卫检查
   Future<bool> _checkPageTypeGuards(Type? fromPageType, Type toPageType) async {
     for (var guard in _pageTypeGuards) {
@@ -705,19 +813,21 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     if (isDrawerStack) {
       return Navigator(
         key: navigatorKey,
-        pages: _pages.isEmpty ? [const MaterialPage(child: SizedBox.shrink())] : List.of(_pages),
-        onPopPage: _onPopPage,
+        pages: _pages.isEmpty
+            ? [const MaterialPage(child: SizedBox.shrink())]
+            : _materialPages,
+        onDidRemovePage: _handleDidRemovePage,
       );
     }
-    
+
     // 主路由栈返回完整的 Navigator with PopScope
     return PopScope(
         canPop: false,
         onPopInvokedWithResult: _onPopInvokedWithResult,
         child: Navigator(
           key: navigatorKey,
-          pages: List.of(_pages),
-          onPopPage: _onPopPage,
+          pages: _materialPages,
+          onDidRemovePage: _handleDidRemovePage,
         ));
   }
 
@@ -728,20 +838,6 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       popRoute();
     }
   }
-
-  bool _onPopPage(Route route, dynamic result) {
-    // 处理用户的侧滑返回手势和 pop 操作
-    if (!route.didPop(result)) {
-      return false;
-    }
-    if (canPop()) {
-      _popAndOnResult(result);
-      notify();
-      return true;
-    }
-    return false;
-  }
-
 
   @override
   Future<void> setNewRoutePath(RouteInformation configuration) async {
@@ -774,7 +870,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 推出一个新页面到导航栈
   Future<void> push<T>(
       {required Widget page,
-      ResultCallBack? onResult,
+      ResultCallback? onResult,
       String? name,
       Object? arguments,
       String? restorationId,
@@ -782,46 +878,50 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       bool fullscreenDialog = false,
       bool allowSnapshotting = true,
       LaunchMode launchMode = LaunchMode.standard}) async {
-    
     // 执行路由守卫检查（基于路由名称）
     final from = RouteInformation(uri: Uri.parse(_location ?? '/'));
-    final to = RouteInformation(uri: Uri.parse(name ?? page.runtimeType.toString()));
+    final to =
+        RouteInformation(uri: Uri.parse(name ?? page.runtimeType.toString()));
     final canNavigate = await _checkRouteGuards(from, to);
     if (!canNavigate) {
       return;
     }
-    
+
     // 执行页面类型守卫检查
-    final fromPageType = _pages.isNotEmpty ? _pages.last.child.runtimeType : null;
+    final fromPageType =
+        _pages.isNotEmpty ? _pages.last.page.runtimeType : null;
     final toPageType = page.runtimeType;
-    final canNavigateByType = await _checkPageTypeGuards(fromPageType, toPageType);
+    final canNavigateByType =
+        await _checkPageTypeGuards(fromPageType, toPageType);
     if (!canNavigateByType) {
       return;
     }
 
     final routeSettings = RouteSettings(
         name: name ?? page.runtimeType.toString(), arguments: arguments);
-    
+
     // 处理启动模式
     switch (launchMode) {
       case LaunchMode.singleTop:
         // 如果栈顶已是该页面类型，则更新参数而不创建新实例（类似Android的onNewIntent）
-        if (_pages.isNotEmpty && 
-            _pages.last.child.runtimeType == page.runtimeType) {
+        if (_pages.isNotEmpty &&
+            _pages.last.page.runtimeType == page.runtimeType) {
           // 更新栈顶页面的参数
           final lastPage = _pages.removeLast();
-          _result.remove(lastPage.hashCode);
-          
-          final updatedPage = MaterialPage(
-              child: page,
-              name: routeSettings.name,
-              arguments: routeSettings.arguments,
-              restorationId: restorationId,
-              maintainState: maintainState,
-              fullscreenDialog: fullscreenDialog,
-              allowSnapshotting: allowSnapshotting);
+          _result.remove(lastPage.materialPage.hashCode);
+
+          final updatedPage = _createPageEntry(
+            page: page,
+            name: routeSettings.name,
+            arguments: routeSettings.arguments,
+            restorationId: restorationId,
+            maintainState: maintainState,
+            fullscreenDialog: fullscreenDialog,
+            allowSnapshotting: allowSnapshotting,
+          );
           _pages.add(updatedPage);
-          _result[updatedPage.hashCode] = onResult;
+          _result[updatedPage.materialPage.hashCode] = onResult;
+          _location = routeSettings.name;
           notify();
           return;
         }
@@ -829,28 +929,30 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       case LaunchMode.singleInstance:
         // 如果栈中已存在该页面，清除它上面的所有页面，并更新参数（类似Android的onNewIntent）
         final existingIndex = _pages.indexWhere(
-            (element) => element.child.runtimeType == page.runtimeType);
-        
+            (element) => element.page.runtimeType == page.runtimeType);
+
         if (existingIndex != -1) {
           // 找到已存在的页面
           // 1. 清除该页面上面的所有页面
           final pagesToRemove = _pages.sublist(existingIndex);
           for (var pageToRemove in pagesToRemove) {
-            _result.remove(pageToRemove.hashCode);
+            _result.remove(pageToRemove.materialPage.hashCode);
           }
           _pages.removeRange(existingIndex, _pages.length);
-          
+
           // 2. 用新参数重新创建该页面（类似onNewIntent）
-          final updatedPage = MaterialPage(
-              child: page,
-              name: routeSettings.name,
-              arguments: routeSettings.arguments,
-              restorationId: restorationId,
-              maintainState: maintainState,
-              fullscreenDialog: fullscreenDialog,
-              allowSnapshotting: allowSnapshotting);
+          final updatedPage = _createPageEntry(
+            page: page,
+            name: routeSettings.name,
+            arguments: routeSettings.arguments,
+            restorationId: restorationId,
+            maintainState: maintainState,
+            fullscreenDialog: fullscreenDialog,
+            allowSnapshotting: allowSnapshotting,
+          );
           _pages.add(updatedPage);
-          _result[updatedPage.hashCode] = onResult;
+          _result[updatedPage.materialPage.hashCode] = onResult;
+          _location = routeSettings.name;
           notify();
           return;
         }
@@ -861,29 +963,31 @@ class RouterProxy extends RouterDelegate<RouteInformation>
         break;
     }
 
-    final target = MaterialPage(
-        child: page,
-        name: routeSettings.name,
-        arguments: routeSettings.arguments,
-        restorationId: restorationId,
-        maintainState: maintainState,
-        fullscreenDialog: fullscreenDialog,
-        allowSnapshotting: allowSnapshotting);
+    final target = _createPageEntry(
+      page: page,
+      name: routeSettings.name,
+      arguments: routeSettings.arguments,
+      restorationId: restorationId,
+      maintainState: maintainState,
+      fullscreenDialog: fullscreenDialog,
+      allowSnapshotting: allowSnapshotting,
+    );
     _pages.add(target);
-    _result[target.hashCode] = onResult;
+    _result[target.materialPage.hashCode] = onResult;
+    _location = routeSettings.name;
     notify();
   }
 
   /// 获取当前显示的页面Widget
-  Widget getCurrentPage()=>_pages.last.child;
+  Widget getCurrentPage() => _pages.last.page;
 
   /// 获取当前显示页面的MaterialPage对象，可用于获取参数
-  MaterialPage getCurrentMaterialPage()=>_pages.last;
+  MaterialPage getCurrentMaterialPage() => _pages.last.materialPage;
 
   ///获取当前显示页面的参数
   T? getArguments<T>() {
     if (_pages.isNotEmpty) {
-      return _pages.last.arguments as T?;
+      return _pages.last.materialPage.arguments as T?;
     }
     return null;
   }
@@ -893,16 +997,17 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       _popAndOnResult(result);
       notify();
     }
-    
+
     // 抽屉栈：栈为空时自动关闭抽屉
-    if (isDrawerStack && _pages.length <= 1 && _drawerConfig?.autoClose == true) {
+    if (isDrawerStack &&
+        _pages.length <= 1 &&
+        _drawerConfig?.autoClose == true) {
       closeDrawerStack();
     }
   }
-  void _popAndOnResult<T>([T? result]){
-    final page = _pages.removeLast();
-    _result[page.hashCode]?.call(result);
-    _result.remove(page.hashCode);
+
+  void _popAndOnResult<T>([T? result]) {
+    _removePageEntryAt(_pages.length - 1, result);
   }
 
   /// 关闭当前窗口，并附带返回值
@@ -914,7 +1019,6 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     }
   }
 
-
   /// 替换当前页面
   void replace(
       {required Widget page,
@@ -922,7 +1026,8 @@ class RouterProxy extends RouterDelegate<RouteInformation>
       Object? arguments,
       String? restorationId}) {
     if (_pages.isNotEmpty) {
-      _pages.removeLast();
+      final removedPage = _pages.removeLast();
+      _result.remove(removedPage.materialPage.hashCode);
     }
     push(
         page: page,
@@ -931,12 +1036,12 @@ class RouterProxy extends RouterDelegate<RouteInformation>
         restorationId: restorationId);
   }
 
-
   /// pop当前页面，然后push一个新页面
   void popAndPushNamed(
       {required String name, Object? arguments, Widget? emptyPage}) {
     if (_pages.isNotEmpty) {
-      _pages.removeLast();
+      final removedPage = _pages.removeLast();
+      _result.remove(removedPage.materialPage.hashCode);
     }
     pushNamed(name: name, arguments: arguments, emptyPage: emptyPage);
   }
@@ -944,13 +1049,12 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 根据名称跳转页面
   Future<void> pushNamed(
       {required String name,
-        ResultCallBack? onResult,
+      ResultCallback? onResult,
       Object? arguments,
       Widget? emptyPage,
       bool custom = true,
       String? restorationId,
       LaunchMode launchMode = LaunchMode.standard}) async {
-    
     // 执行路由守卫检查
     final from = RouteInformation(uri: Uri.parse(_location ?? '/'));
     final to = RouteInformation(uri: Uri.parse(name));
@@ -962,7 +1066,7 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     var page = pageMap?[name];
     _location = name;
     if (custom && page == null) {
-      page = _routePathCallBack
+      page = _RoutePathCallback
           ?.call(RouteInformation(uri: Uri.parse(_location!)));
     }
     if (page == null) {
@@ -981,23 +1085,27 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   /// 回到根页面
   void goRootPage() {
     _pages.clear();
+    _result.clear();
     _location = '/';
     pushNamed(name: _location!);
   }
 
   /// 清空页面栈并push新页面
   void pushAndRemoveAll(Widget page) {
-    pages.clear();
+    _pages.clear();
+    _result.clear();
     push(page: page);
   }
+
   /// 跳转到指定页面，并清空之前的所有页面
   void pushNamedAndRemoveAll(
       {required String name,
-        Object? arguments,
-        Widget? emptyPage,
-        String? restorationId}) {
+      Object? arguments,
+      Widget? emptyPage,
+      String? restorationId}) {
     if (_pages.isNotEmpty) {
       _pages.clear();
+      _result.clear();
     }
     pushNamed(
         name: name,
@@ -1007,27 +1115,34 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   /// 将页面置于栈顶（如果已存在则先移除）
-  /// 
+  ///
   /// @deprecated 使用 push(page: xxx, launchMode: LaunchMode.singleInstance) 代替
-  /// 
+  ///
   /// 示例：
   /// ```dart
   /// // 旧方式
   /// router.pushStackTop(page: HomePage());
-  /// 
+  ///
   /// // 新方式（推荐）
   /// router.push(page: HomePage(), launchMode: LaunchMode.singleInstance);
   /// ```
-  @Deprecated('Use push(page: xxx, launchMode: LaunchMode.singleInstance) instead')
+  @Deprecated(
+      'Use push(page: xxx, launchMode: LaunchMode.singleInstance) instead')
   void pushStackTop({required Widget page}) {
     if (_pages.isNotEmpty) {
+      final removedPages = _pages
+          .where((element) => element.page.runtimeType == page.runtimeType)
+          .toList(growable: false);
       _pages.removeWhere(
-          (element) => element.child.runtimeType == page.runtimeType);
+          (element) => element.page.runtimeType == page.runtimeType);
+      for (final removedPage in removedPages) {
+        _result.remove(removedPage.materialPage.hashCode);
+      }
     }
     push(page: page);
   }
 
-  List<MaterialPage> get pages => _pages;
+  List<MaterialPage> get pages => _materialPages;
 
   String? getLocation() {
     return _location;
@@ -1039,12 +1154,8 @@ class RouterProxy extends RouterDelegate<RouteInformation>
   }
 
   void notify() {
-    debugPrint('[$stackId] notify() called, hasListeners: $hasListeners');
     notifyListeners();
   }
-
-
-
 
   /// 显示一个通用的对话框(Dialog)
   /// 示例:
@@ -1136,39 +1247,107 @@ class RouterProxy extends RouterDelegate<RouteInformation>
     final snackBar = SnackBar(content: Text(message));
     ScaffoldMessenger.of(_context!).showSnackBar(snackBar);
   }
+}
 
-  /// 非页面跳转，只切换到目标页面 (例如主页的Tab切换)
-  void goToTarget(Widget page, {bool insert = true}) {
-    _navigateToTargetCallBack?.call(navigatorKey.currentContext!, page);
-    if (insert) {
-      // 避免重复添加
-      if (_targetPageQueue.isNotEmpty &&
-          _targetPageQueue.last.runtimeType == page.runtimeType) {
+class _RouterPageEntry {
+  const _RouterPageEntry({
+    required this.page,
+    required this.materialPage,
+  });
+
+  final Widget page;
+  final MaterialPage materialPage;
+}
+
+class _MainStackPageBinding extends StatefulWidget {
+  const _MainStackPageBinding({
+    required this.router,
+    required this.child,
+  });
+
+  final RouterProxy router;
+  final Widget child;
+
+  @override
+  State<_MainStackPageBinding> createState() => _MainStackPageBindingState();
+}
+
+class _MainStackPageBindingState extends State<_MainStackPageBinding> {
+  bool _syncScheduled = false;
+  ScaffoldState? _lastBoundState;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleSync();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MainStackPageBinding oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.router, widget.router) &&
+        _lastBoundState != null) {
+      oldWidget.router._unbindAutoMainScaffoldState(_lastBoundState!);
+      _lastBoundState = null;
+    }
+    _scheduleSync();
+  }
+
+  void _scheduleSync() {
+    if (_syncScheduled) return;
+    _syncScheduled = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncScheduled = false;
+      if (!mounted) return;
+
+      final route = ModalRoute.of(context);
+      if (route != null && !route.isCurrent) {
+        if (_lastBoundState != null) {
+          widget.router._unbindAutoMainScaffoldState(_lastBoundState!);
+          _lastBoundState = null;
+        }
         return;
       }
-      _targetPageQueue.add(page);
-    }
-    if (_targetPageQueue.length > _maxQueue) {
-      _targetPageQueue.removeAt(0);
-    }
+
+      final scaffoldState = _findDescendantScaffoldState(context as Element);
+      if (!identical(_lastBoundState, scaffoldState) &&
+          _lastBoundState != null) {
+        widget.router._unbindAutoMainScaffoldState(_lastBoundState!);
+      }
+
+      _lastBoundState = scaffoldState;
+      widget.router._bindAutoMainScaffoldState(scaffoldState);
+    });
   }
 
-  /// 返回到上一个非页面跳转的目标
-  void backTarget() {
-    // Pop当前的目标
-    if (_targetPageQueue.isNotEmpty) {
-      _targetPageQueue.removeLast();
+  ScaffoldState? _findDescendantScaffoldState(Element element) {
+    ScaffoldState? scaffoldState;
+
+    void visitor(Element child) {
+      if (scaffoldState != null) return;
+      if (child is StatefulElement && child.state is ScaffoldState) {
+        scaffoldState = child.state as ScaffoldState;
+        return;
+      }
+      child.visitChildElements(visitor);
     }
 
-    // 获取新的目标，如果队列为空则为null
-    final Widget? targetPage =
-        _targetPageQueue.isNotEmpty ? _targetPageQueue.last : null;
-
-    _navigateToTargetCallBack?.call(navigatorKey.currentContext!, targetPage);
+    element.visitChildElements(visitor);
+    return scaffoldState;
   }
 
-  /// 清空所有非页面跳转的目标
-  void clearTargets() {
-    _targetPageQueue.clear();
+  @override
+  void dispose() {
+    if (_lastBoundState != null) {
+      widget.router._unbindAutoMainScaffoldState(_lastBoundState!);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _scheduleSync();
+    return widget.child;
   }
 }

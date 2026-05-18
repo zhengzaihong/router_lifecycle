@@ -1,16 +1,17 @@
 # router_lifecycle_example
 
-Demonstrates how to use the router_lifecycle plugin.
+Demonstrates how to use the `router_pro` package.
 
-## Getting Started
+## Run the example
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+## What it covers
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- `RouterProxy` navigation and launch modes
+- named routes and route guards
+- drawer stack navigation
+- lifecycle callbacks and visibility tracking

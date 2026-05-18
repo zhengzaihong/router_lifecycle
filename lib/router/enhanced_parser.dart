@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'route_parser.dart';
 import 'route_pattern.dart';
-
-
 /// author:郑再红
 /// email:1096877329@qq.com
 /// date:2026-04-29 17:20
@@ -13,7 +11,7 @@ import 'route_pattern.dart';
 /// - 查询参数解析（?key=value）
 /// - 路由别名（/home -> /）
 /// - 路由验证
-/// 
+///
 /// 使用示例：
 /// ```dart
 /// final parser = EnhancedParser(
@@ -25,31 +23,33 @@ import 'route_pattern.dart';
 ///     RoutePattern('/product/:category/:id'),
 ///   ],
 /// );
-/// 
+///
 /// MaterialApp.router(
 ///   routerDelegate: router,
 ///   routeInformationParser: parser,
 /// );
 /// ```
+/// A route parser with support for aliases, path params, and query params.
 class EnhancedParser extends RouteParser {
   /// 是否启用路径参数解析
+  /// Whether to parse path parameters such as `/user/:id`.
   final bool enablePathParams;
-  
   /// 是否启用查询参数解析
+  /// Whether to parse query parameters.
   final bool enableQueryParams;
-  
-  /// 是否启用路由验证
+
+  /// Whether to validate resolved routes.
   final bool enableValidation;
-  
   /// 路由别名映射
   /// 例如：{'/home': '/', '/profile': '/user/profile'}
+  /// Route alias mappings such as `{'/home': '/'}`.
   final Map<String, String>? routeAliases;
-  
   /// 路由模式列表
   /// 用于匹配和解析路径参数
+  /// Route patterns used to match and extract path parameters.
   final List<RoutePattern>? patterns;
-  
   /// 默认路由（当路由不存在时跳转）
+  /// Fallback route used when validation fails.
   final String? defaultRoute;
 
   const EnhancedParser({
@@ -67,19 +67,18 @@ class EnhancedParser extends RouteParser {
   ) async {
     var uri = routeInformation.uri;
     var path = uri.path;
-    
     // 1. 处理路由别名
+    // 1. Resolve route aliases.
     if (routeAliases != null && routeAliases!.containsKey(path)) {
       final aliasPath = routeAliases![path]!;
       uri = Uri.parse(aliasPath).replace(
-        queryParameters: uri.queryParameters.isNotEmpty 
-            ? uri.queryParameters 
-            : null,
+        queryParameters:
+            uri.queryParameters.isNotEmpty ? uri.queryParameters : null,
       );
       path = uri.path;
     }
-    
     // 2. 解析路径参数
+    // 2. Resolve path parameters.
     Map<String, String>? pathParams;
     String? matchedPattern;
     if (enablePathParams && patterns != null) {
@@ -91,14 +90,14 @@ class EnhancedParser extends RouteParser {
         }
       }
     }
-    
     // 3. 解析查询参数
+    // 3. Resolve query parameters.
     Map<String, String>? queryParams;
     if (enableQueryParams && uri.hasQuery) {
       queryParams = Map<String, String>.from(uri.queryParameters);
     }
-    
     // 4. 验证路由
+    // 4. Validate the resolved route when enabled.
     if (enableValidation) {
       final isValid = _validateRoute(uri, pathParams, queryParams);
       if (!isValid && defaultRoute != null) {
@@ -108,8 +107,8 @@ class EnhancedParser extends RouteParser {
         queryParams = null;
       }
     }
-    
     // 5. 构建新的 RouteInformation，将解析结果存储在 state 中
+    // 5. Attach parsed metadata to RouteInformation.state.
     return RouteInformation(
       uri: uri,
       state: {
@@ -126,31 +125,23 @@ class EnhancedParser extends RouteParser {
   RouteInformation? restoreRouteInformation(RouteInformation configuration) {
     return configuration;
   }
-
   /// 验证路由是否有效
+  /// Returns whether the parsed route should be treated as valid.
   bool _validateRoute(
     Uri uri,
     Map<String, String>? pathParams,
     Map<String, String>? queryParams,
   ) {
-    // 基本验证：路径不能为空
     if (uri.path.isEmpty) {
       return false;
     }
-    
-    // 如果定义了模式，检查是否匹配任何模式
-    if (patterns != null && patterns!.isNotEmpty) {
-      // 如果没有匹配到任何模式，可能是无效路由
-      // 但这里我们允许未定义模式的路由通过
-      // 可以根据需求调整
-    }
-    
+
     return true;
   }
 }
-
 /// 路由参数辅助类
 /// 用于从 RouteInformation 的 state 中提取参数
+/// Parsed route metadata stored in [RouteInformation.state].
 class RouteParams {
   final String path;
   final Map<String, String>? pathParams;
@@ -167,9 +158,10 @@ class RouteParams {
   });
 
   /// 从 RouteInformation 的 state 中提取参数
+  /// Creates an instance from `RouteInformation.state`.
   static RouteParams? fromState(Object? state) {
     if (state is! Map) return null;
-    
+
     return RouteParams(
       path: state['path'] as String? ?? '/',
       pathParams: state['pathParams'] as Map<String, String>?,
@@ -180,12 +172,15 @@ class RouteParams {
   }
 
   /// 获取路径参数
+  /// Returns a path parameter by key.
   String? getPathParam(String key) => pathParams?[key];
 
   /// 获取查询参数
+  /// Returns a query parameter by key.
   String? getQueryParam(String key) => queryParams?[key];
 
   /// 获取所有参数（路径参数 + 查询参数）
+  /// Returns both path and query parameters in a single map.
   Map<String, String> getAllParams() {
     return {
       ...?pathParams,

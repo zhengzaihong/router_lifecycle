@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:router_pro/router/route_parser.dart';
 
@@ -8,18 +7,21 @@ import 'package:router_pro/router/route_parser.dart';
 /// date: 2022/12/7
 /// time: 13:51
 /// describe: 没做解析，外部需要自定义RouteParser
+/// A minimal parser that forwards [RouteInformation] unchanged.
+///  Use this when you do not need path parsing or parameter extraction.
 ///
 class CustomParser extends RouteParser {
-
   const CustomParser() : super();
 
   @override
-  Future<RouteInformation> parseRouteInformation(RouteInformation routeInformation) async {
+  Future<RouteInformation> parseRouteInformation(
+    RouteInformation routeInformation,
+  ) async {
     return routeInformation;
   }
 
   @override
-  RouteInformation restoreRouteInformation(RouteInformation routeInformation) {
-    return routeInformation;
+  RouteInformation restoreRouteInformation(RouteInformation configuration) {
+    return configuration;
   }
 }

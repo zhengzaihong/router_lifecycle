@@ -1,4 +1,3 @@
-
 import 'dart:math' show max, min;
 
 import 'dart:async' show Timer;
@@ -8,7 +7,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
-
+///
+/// author:郑再红
+/// email:1096877329@qq.com
+/// date: 2023/12/22
+/// time: 14:17
+/// describe:监听Widget/Sliver当前的可见度
+///
 /// A [VisibilityDetector] widget fires a specified callback when the widget
 /// changes visibility.
 ///
@@ -274,7 +279,6 @@ bool _floatNear(double f1, double f2) {
       (absDiff / max(f1.abs(), f2.abs()) <= _kDefaultTolerance);
 }
 
-
 /// The [RenderObject] corresponding to the [VisibilityDetector] widget.
 ///
 /// [RenderVisibilityDetector] is a bridge between [VisibilityDetector] and
@@ -329,7 +333,6 @@ class RenderVisibilityDetector extends RenderProxyBox {
   }
 }
 
-
 /// Returns a sequence containing the specified [Layer] and all of its
 /// ancestors.  The returned sequence is in [parent, child] order.
 Iterable<Layer> _getLayerChain(Layer start) {
@@ -369,7 +372,6 @@ Rect _localRectToGlobal(Layer layer, Rect localRect) {
   final transform = _accumulateTransforms(layerChain.skip(1));
   return MatrixUtils.transformRect(transform, localRect);
 }
-
 
 /// The [Layer] corresponding to a [VisibilityDetector] widget.
 ///
@@ -437,7 +439,12 @@ class VisibilityDetectorLayer extends ContainerLayer {
 
   /// Computes the accumulated clipping bounds, in global coordinates.
   Rect _computeClipRect() {
-    var clipRect = Offset.zero & RendererBinding.instance.renderView.size;
+    final renderViews = RendererBinding.instance.renderViews;
+    if (renderViews.isEmpty) {
+      return Rect.zero;
+    }
+
+    var clipRect = Offset.zero & renderViews.first.size;
 
     var parentLayer = parent;
     while (parentLayer != null) {
@@ -610,7 +617,6 @@ class VisibilityDetectorLayer extends ContainerLayer {
   }
 }
 
-
 /// The [RenderObject] corresponding to the [SliverVisibilityDetector] widget.
 ///
 /// [RenderSliverVisibilityDetector] is a bridge between
@@ -694,8 +700,6 @@ class RenderSliverVisibilityDetector extends RenderProxySliver {
     context.pushLayer(layer, super.paint, offset);
   }
 }
-
-
 
 /// A [VisibilityDetectorController] is a singleton object that can perform
 /// actions and change configuration for all [VisibilityDetector] widgets.

@@ -53,7 +53,7 @@ Flutter 的 **StatelessWidget/StatefulWidget** 不像 Android 的 **Activity/Fra
 
 ```yaml
 dependencies:
-  router_pro: ^0.2.0
+  router_pro: ^0.2.1
 ```
 
 导入：
@@ -667,6 +667,8 @@ router.closeMainDrawer(isEndDrawer: false); // 关闭左侧抽屉
 router.isMainDrawerOpen(isEndDrawer: true); // 检查右侧抽屉是否打开
 ```
 
+主路由栈的抽屉方法现在会自动绑定当前页面的 `Scaffold`。如果你需要显式控制，仍然可以调用 `bindMainScaffoldKey(...)`。
+
 ---
 
 ## ⚡ 功能五：生命周期感知
@@ -1026,21 +1028,21 @@ LifeCycle(
 
 ## 🔄 版本迁移
 
-### 从 0.1.x 升级到 0.2.0
+### 升级到 0.2.1
 
-版本 0.2.0 **完全向后兼容**，所有现有代码无需修改即可正常工作。
+0.2.1 保持了 `0.2.x` 的主要 API 形态，但同步收紧了 SDK 约束，使其与当前实际使用到的 Flutter / Dart API 一致。
 
-**新增功能（可选使用）：**
-- 路由启动模式（`launchMode` 参数）
-- 路由导航守卫（`addRouteGuard` 方法）
-- 命名路由值回传（`pushNamed` 的 `onResult` 参数）
-- 自定义404页面（`notFoundPage` 参数）
+**本次发布重点：**
+- 主路由栈的抽屉方法现在会自动绑定当前页面的 `Scaffold`
+- 已替换废弃的 Navigator 页面回退回调用法
+- 发布元数据、源码注释与示例代码已同步整理
+- 最低支持环境调整为 **Dart 3.4** 与 **Flutter 3.22**
 
 **升级步骤：**
 ```yaml
 # 更新 pubspec.yaml
 dependencies:
-  router_pro: ^0.2.0
+  router_pro: ^0.2.1
 ```
 
 ```bash
@@ -1076,6 +1078,12 @@ flutter run
 ---
 
 ## 📄 更新日志
+
+### v0.2.1
+- 主路由栈抽屉控制支持自动绑定当前页面的 `Scaffold`，同时保留 `bindMainScaffoldKey(...)`
+- 替换已废弃的 Navigator 页面移除回调用法
+- 更新可见性裁剪逻辑，适配当前 Flutter 渲染 API
+- 清理发布说明、源码注释与示例代码
 
 ### v0.2.0
 - ✅ 新增路由启动模式（Standard、SingleTop、SingleInstance）
