@@ -80,11 +80,28 @@ void initRouter() {
     },
   );
 
+  // 创建增强的路由解析器，并与 RouterProxy 共享
+  router.setRouteInformationParser(
+    EnhancedParser(
+      enablePathParams: true,
+      enableQueryParams: true,
+      routeAliases: {
+        '/home': '/',
+      },
+      patterns: [
+        RoutePattern('/user/:id'),
+        RoutePattern('/product/:category/:id'),
+      ],
+    ),
+  );
+
   // 添加命名路由守卫 - 用于 pushNamed 方式
   router.addRouteGuard((from, to) async {
-    final protectedRoutes = ['/profile'];
+    final protectedRoutes = {'/profile'};
 
-    if (protectedRoutes.contains(to.uri.toString()) && !_isLoggedIn) {
+    // 使用 uri.path 并规范化，避免 /profile?x=1、/profile/ 绕过守卫
+    if (protectedRoutes.contains(normalizeRoutePath(to.uri.path)) &&
+        !_isLoggedIn) {
       debugPrint('路由守卫: 拦截命名路由 ${to.uri}，需要登录');
       router.pushNamed(name: '/login');
       return false;
@@ -136,23 +153,10 @@ void toggleLoginStatus() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 创建增强的路由解析器
-    final parser = EnhancedParser(
-      enablePathParams: true,
-      enableQueryParams: true,
-      routeAliases: {
-        '/home': '/',
-      },
-      patterns: [
-        RoutePattern('/user/:id'),
-        RoutePattern('/product/:category/:id'),
-      ],
-    );
-
     return MaterialApp.router(
       title: 'Router Pro - 完整示例',
       debugShowCheckedModeBanner: false,
@@ -161,14 +165,14 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       routerDelegate: router,
-      routeInformationParser: parser, // 使用增强的解析器
+      routeInformationParser: router.defaultParser(), // 使用增强的解析器
     );
   }
 }
 
 // ============ 首页 ============
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -456,7 +460,7 @@ class _HomePageState extends State<HomePage> {
     router.pushNamed(
       name: '/settings',
       onResult: (value) {
-        router.showAppSnackBar(message: value);
+        router.showAppSnackBar(message: '${value ?? ''}');
       },
     );
   }
@@ -470,7 +474,7 @@ class _HomePageState extends State<HomePage> {
 class DetailPage extends StatelessWidget {
   final String title;
 
-  const DetailPage({Key? key, required this.title}) : super(key: key);
+  const DetailPage({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -508,7 +512,7 @@ class DetailPage extends StatelessWidget {
 
 // ============ 登录页 ============
 class LoginPage extends StatelessWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -528,6 +532,7 @@ class LoginPage extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () {
                 // 模拟登录成功
+                _isLoggedIn = true;
                 router.pop();
               },
               icon: const Icon(Icons.login),
@@ -542,7 +547,7 @@ class LoginPage extends StatelessWidget {
 
 // ============ 个人中心 ============
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -557,7 +562,7 @@ class ProfilePage extends StatelessWidget {
 
 // ============ 设置页 ============
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -593,7 +598,7 @@ class SettingsPage extends StatelessWidget {
 
 // ============ 404页面 ============
 class NotFoundPage extends StatelessWidget {
-  const NotFoundPage({Key? key}) : super(key: key);
+  const NotFoundPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -625,7 +630,7 @@ class NotFoundPage extends StatelessWidget {
 
 // ============ 视频播放演示页 ============
 class VideoPlayerDemoPage extends StatefulWidget {
-  const VideoPlayerDemoPage({Key? key}) : super(key: key);
+  const VideoPlayerDemoPage({super.key});
 
   @override
   State<VideoPlayerDemoPage> createState() => _VideoPlayerDemoPageState();
@@ -640,10 +645,12 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
       visibilityThreshold: 0.8,
       debugLabel: 'VideoPlayer',
       onResume: () {
+        if (!mounted) return;
         setState(() => _isPlaying = true);
         debugPrint('视频开始播放');
       },
       onPause: () {
+        if (!mounted) return;
         setState(() => _isPlaying = false);
         debugPrint('视频暂停');
       },
@@ -700,7 +707,7 @@ class _VideoPlayerDemoPageState extends State<VideoPlayerDemoPage> {
 
 // ============ 个人详情页（用于演示页面类型守卫） ===========
 class ProfileDetailPage extends StatelessWidget {
-  const ProfileDetailPage({Key? key}) : super(key: key);
+  const ProfileDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -744,9 +751,9 @@ class SingleInstanceDemoPage extends StatelessWidget {
   final String timestamp;
 
   const SingleInstanceDemoPage({
-    Key? key,
+    super.key,
     required this.timestamp,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -828,7 +835,7 @@ class SingleInstanceDemoPage extends StatelessWidget {
 
 // ============ 中间页面（用于演示 SingleInstance 清除效果） ===========
 class IntermediatePage extends StatelessWidget {
-  const IntermediatePage({Key? key}) : super(key: key);
+  const IntermediatePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -887,7 +894,7 @@ class IntermediatePage extends StatelessWidget {
 
 // ============ 增强路由解析器演示页 ============
 class EnhancedParserDemoPage extends StatelessWidget {
-  const EnhancedParserDemoPage({Key? key}) : super(key: key);
+  const EnhancedParserDemoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1018,7 +1025,7 @@ class EnhancedParserDemoPage extends StatelessWidget {
 class UserDetailPage extends StatelessWidget {
   final String userId;
 
-  const UserDetailPage({Key? key, required this.userId}) : super(key: key);
+  const UserDetailPage({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -1073,12 +1080,12 @@ class ProductDetailPage extends StatelessWidget {
   final String? size;
 
   const ProductDetailPage({
-    Key? key,
+    super.key,
     required this.category,
     required this.productId,
     this.color,
     this.size,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1156,10 +1163,10 @@ class SearchResultPage extends StatelessWidget {
   final int page;
 
   const SearchResultPage({
-    Key? key,
+    super.key,
     required this.keyword,
     this.page = 1,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1233,7 +1240,7 @@ class SearchResultPage extends StatelessWidget {
 
 /// 抽屉首页
 class DrawerHomePage extends StatelessWidget {
-  const DrawerHomePage({Key? key}) : super(key: key);
+  const DrawerHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1359,7 +1366,7 @@ class DrawerHomePage extends StatelessWidget {
 
 /// 抽屉设置页
 class DrawerSettingsPage extends StatelessWidget {
-  const DrawerSettingsPage({Key? key}) : super(key: key);
+  const DrawerSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1474,7 +1481,7 @@ class DrawerSettingsPage extends StatelessWidget {
 
 /// 抽屉个人资料页
 class DrawerProfilePage extends StatelessWidget {
-  const DrawerProfilePage({Key? key}) : super(key: key);
+  const DrawerProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1552,7 +1559,7 @@ class DrawerProfilePage extends StatelessWidget {
 
 // 其他抽屉子页面（简化实现）
 class DrawerNotificationPage extends StatelessWidget {
-  const DrawerNotificationPage({Key? key}) : super(key: key);
+  const DrawerNotificationPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1562,7 +1569,7 @@ class DrawerNotificationPage extends StatelessWidget {
 }
 
 class DrawerAboutPage extends StatelessWidget {
-  const DrawerAboutPage({Key? key}) : super(key: key);
+  const DrawerAboutPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1572,7 +1579,7 @@ class DrawerAboutPage extends StatelessWidget {
 }
 
 class DrawerHelpPage extends StatelessWidget {
-  const DrawerHelpPage({Key? key}) : super(key: key);
+  const DrawerHelpPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1582,7 +1589,7 @@ class DrawerHelpPage extends StatelessWidget {
 }
 
 class DrawerLanguagePage extends StatelessWidget {
-  const DrawerLanguagePage({Key? key}) : super(key: key);
+  const DrawerLanguagePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1592,7 +1599,7 @@ class DrawerLanguagePage extends StatelessWidget {
 }
 
 class DrawerThemePage extends StatelessWidget {
-  const DrawerThemePage({Key? key}) : super(key: key);
+  const DrawerThemePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1602,7 +1609,7 @@ class DrawerThemePage extends StatelessWidget {
 }
 
 class DrawerPrivacyPage extends StatelessWidget {
-  const DrawerPrivacyPage({Key? key}) : super(key: key);
+  const DrawerPrivacyPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1612,7 +1619,7 @@ class DrawerPrivacyPage extends StatelessWidget {
 }
 
 class DrawerSecurityPage extends StatelessWidget {
-  const DrawerSecurityPage({Key? key}) : super(key: key);
+  const DrawerSecurityPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1622,7 +1629,7 @@ class DrawerSecurityPage extends StatelessWidget {
 }
 
 class DrawerEditProfilePage extends StatelessWidget {
-  const DrawerEditProfilePage({Key? key}) : super(key: key);
+  const DrawerEditProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {

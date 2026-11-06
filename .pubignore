@@ -1,0 +1,21 @@
+# Files excluded from `dart pub publish`.
+visibility_detector.md
+.kiro/
+.codeartsdoer/
+.idea/
+.github/
+tool/
+build/
+.dart_tool/
+coverage/
+*.log
+
+example/android/
+example/ios/
+example/linux/
+example/macos/
+example/ohos/
+example/web/
+example/windows/
+example/build/
+example/.dart_tool/

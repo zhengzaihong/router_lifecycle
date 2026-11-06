@@ -153,7 +153,7 @@ Future<RouterProxy> _pumpRouter(WidgetTester tester) async {
   );
   await tester.pumpAndSettle();
 
-  router.pushNamedAndRemoveAll(name: '/');
+  await router.pushNamedAndRemoveAll(name: '/');
   await tester.pumpAndSettle();
   return router;
 }

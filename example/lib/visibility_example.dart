@@ -5,7 +5,7 @@ import 'package:router_pro/wrapper/visibility_detector.dart';
 /// 演示可见性检测的各种应用场景
 
 class VisibilityExamplePage extends StatefulWidget {
-  const VisibilityExamplePage({Key? key}) : super(key: key);
+  const VisibilityExamplePage({super.key});
 
   @override
   State<VisibilityExamplePage> createState() => _VisibilityExamplePageState();
@@ -13,7 +13,8 @@ class VisibilityExamplePage extends StatefulWidget {
 
 class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
   final List<String> _visibilityLogs = [];
-  int _visibleItemCount = 0;
+  final Set<int> _fullyVisibleItems = <int>{};
+  int get _visibleItemCount => _fullyVisibleItems.length;
 
   void _addLog(String message) {
     setState(() {
@@ -83,14 +84,16 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
       onVisibilityChanged: (info) {
         // 使用新增的便捷属性
         if (info.isFullyVisible) {
-          _addLog('Item $index 完全可见');
-          setState(() => _visibleItemCount++);
+          if (_fullyVisibleItems.add(index)) {
+            _addLog('Item $index 完全可见');
+          }
         } else if (info.isPartiallyVisible) {
           _addLog(
               'Item $index 部分可见 (${(info.visibleFraction * 100).toStringAsFixed(0)}%)');
         } else if (info.isInvisible) {
-          _addLog('Item $index 不可见');
-          setState(() => _visibleItemCount--);
+          if (_fullyVisibleItems.remove(index)) {
+            _addLog('Item $index 不可见');
+          }
         }
       },
       child: Container(
@@ -136,7 +139,7 @@ class _VisibilityExamplePageState extends State<VisibilityExamplePage> {
 
 /// 懒加载图片示例
 class LazyImageExample extends StatefulWidget {
-  const LazyImageExample({Key? key}) : super(key: key);
+  const LazyImageExample({super.key});
 
   @override
   State<LazyImageExample> createState() => _LazyImageExampleState();
@@ -194,7 +197,7 @@ class _LazyImageExampleState extends State<LazyImageExample> {
 
 /// 视频自动播放示例
 class AutoPlayVideoExample extends StatefulWidget {
-  const AutoPlayVideoExample({Key? key}) : super(key: key);
+  const AutoPlayVideoExample({super.key});
 
   @override
   State<AutoPlayVideoExample> createState() => _AutoPlayVideoExampleState();
@@ -264,7 +267,7 @@ class _AutoPlayVideoExampleState extends State<AutoPlayVideoExample> {
 
 /// 曝光统计示例
 class ExposureTrackingExample extends StatefulWidget {
-  const ExposureTrackingExample({Key? key}) : super(key: key);
+  const ExposureTrackingExample({super.key});
 
   @override
   State<ExposureTrackingExample> createState() =>
@@ -274,8 +277,14 @@ class ExposureTrackingExample extends StatefulWidget {
 class _ExposureTrackingExampleState extends State<ExposureTrackingExample> {
   final Map<int, int> _exposureCounts = {};
   final Map<int, DateTime?> _lastExposureTime = {};
+  final Set<int> _exposedItems = <int>{};
 
   void _trackExposure(int index) {
+    // 每次进入完全可见状态只记录一次，避免滚动过程中重复计数。
+    if (!_exposedItems.add(index)) {
+      return;
+    }
+
     setState(() {
       _exposureCounts[index] = (_exposureCounts[index] ?? 0) + 1;
       _lastExposureTime[index] = DateTime.now();

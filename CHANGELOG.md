@@ -1,3 +1,42 @@
+## 0.2.2 
+
+### 修复
+
+- 命名路由与 `MaterialApp.router` 共享同一个 `RouteInformationParser`：`pushNamed` / `setNewRoutePath` 会把解析后的 `state`（路径参数、查询参数、匹配模式）传给路由回调，`pageMap` 改用 URI path 查找
+- 所有导航操作在修改页面栈前先执行路由守卫与页面类型守卫；`replace`、`popAndPushNamed`、`pushAndRemoveAll`、`pushNamedAndRemoveAll` 被拦截时不再丢失页面
+- `pushNamed` 不再提前改写 `_location`，路由守卫只执行一次
+- 每个页面生成唯一 `Key`，修正 `standard` / `singleTop` / `singleInstance` 的页面匹配与重建语义
+- `setNewRoutePath` 改为按页面栈定位，浏览器前进/后退不再丢页或重复入栈
+- 页面栈为空时回退到 404 页面，`getCurrentPage` / `getCurrentMaterialPage` 不再抛 `RangeError`
+- 最低 SDK 约束修正为 Dart 3.4 / Flutter 3.24，与 `onDidRemovePage`、`onPopInvokedWithResult` 等 API 保持一致
+
+### 优化
+
+- 路由模板中的正则元字符（如 `.`、`+`、`*`）现在按字面量转义，避免越权匹配与 ReDoS
+- `EnhancedParser` 的别名与默认路由解析失败时不再抛异常；`RouteParams.fromState` 兼容动态 Map
+- `getArguments<T>()` 类型不匹配时返回 null，不再抛 `TypeError`
+- 新增 `normalizeRoutePath()`；守卫示例改用 `uri.path` + 规范化匹配，避免 query、尾斜杠绕过
+- 导航操作通过串行队列执行，守卫 `await` 期间页面栈不再被交错修改
+- `LifeCycle` dispose 时清理 `VisibilityDetector` 缓存；`visibilityThreshold = 0.0` 不再在 0% 可见时触发 `onResume`
+- `RouterProxy.dispose()` 释放页面栈、抽屉上下文和静态引用；`DrawerStackController.dispose()` 支持 `disposeRouter`
+- `VisibilityDetector` 回调处理改为快照 + 防重入，回调中调用 `notifyNow` / `forget` 不再抛 `ConcurrentModificationError`
+- `VisibilityDetector` 在图层链异常或 Sliver geometry 为空时安全降级
+- 新增 `RouterProxy.debugLogging` / `DrawerStackController.debugLogging` 日志开关，release 默认关闭路由日志
+- `DrawerNavigator` 支持 `controller` 变更时切换监听
+
+### 工程质量
+
+- analyzer 开启 `strict-casts` / `strict-inference` / `strict-raw-types`，`flutter_lints` 升级到 4.x
+- 新增 GitHub Actions CI：格式检查、静态分析、测试与覆盖率产物
+- 新增 `.pubignore`，排除学习笔记与平台工程目录；不再忽略 `example/test/`
+- 补齐 pub 发布元数据（`repository` / `issue_tracker` / `topics`），`uses-material-design` 改为 `true`
+- `ResultCallback` / `PopInvokedWithResultCallback` 去掉无意义的 `dynamic`；`push` / `pop` 移除未使用的泛型参数
+- `RouterProxy` 的顶层辅助类拆分到 `router_proxy_internal.dart`
+- 示例修复：`LifeCycle` 回调中的 `setState` 增加 `mounted` 保护，可见性计数与曝光统计改用集合去重
+- README 中英双版功能编号统一为 Feature 1-5 / 功能一至功能五
+
+---
+
 ## 0.2.1
 
 ### 修复
@@ -11,7 +50,7 @@
 
 - 清理库内过时的作者/时间模板注释，改为面向 API 的说明
 - 移除无用的 plugin 模板配置和未使用依赖
-- 调整最低 SDK 约束到 Dart 3.4 / Flutter 3.22，以匹配当前代码实际依赖的 API
+- 调整最低 SDK 约束到 Dart 3.4 / Flutter 3.24，以匹配当前代码实际依赖的 API
 
 ---
 

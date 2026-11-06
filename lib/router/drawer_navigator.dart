@@ -34,9 +34,9 @@ class DrawerNavigator extends StatefulWidget {
   final DrawerStackController controller;
 
   const DrawerNavigator({
-    Key? key,
+    super.key,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
   State<DrawerNavigator> createState() => _DrawerNavigatorState();
@@ -47,6 +47,15 @@ class _DrawerNavigatorState extends State<DrawerNavigator> {
   void initState() {
     super.initState();
     widget.controller.routerProxy.addListener(_onRouterChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant DrawerNavigator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.routerProxy.removeListener(_onRouterChanged);
+      widget.controller.routerProxy.addListener(_onRouterChanged);
+    }
   }
 
   @override
@@ -70,7 +79,6 @@ class _DrawerNavigatorState extends State<DrawerNavigator> {
   }
 }
 
-
 /// InheritedWidget 用于在抽屉内传递 DrawerStackController
 ///
 /// 抽屉内的页面可以通过以下方式访问 DrawerStackController：
@@ -83,10 +91,10 @@ class InheritedDrawerStackController extends InheritedWidget {
   final DrawerStackController controller;
 
   const InheritedDrawerStackController({
-    Key? key,
+    super.key,
     required this.controller,
-    required Widget child,
-  }) : super(key: key, child: child);
+    required super.child,
+  });
 
   /// 从 context 中获取 DrawerStackController
   /// Reads the nearest [DrawerStackController] from [context].

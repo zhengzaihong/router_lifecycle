@@ -3,6 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/router_pro.svg)](https://pub.dev/packages/router_pro)
 [![GitHub stars](https://img.shields.io/github/stars/zhengzaihong/router_lifecycle.svg?style=social)](https://github.com/zhengzaihong/router_lifecycle)
 [![license](https://img.shields.io/github/license/zhengzaihong/router_lifecycle)](LICENSE)
+[![在线演示](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f)](https://zhengzaihong.github.io/router_lifecycle/)
 
 [English](README.md) | 简体中文
 
@@ -53,7 +54,7 @@ Flutter 的 **StatelessWidget/StatefulWidget** 不像 Android 的 **Activity/Fra
 
 ```yaml
 dependencies:
-  router_pro: ^0.2.1
+  router_pro: ^0.2.2
 ```
 
 导入：
@@ -86,13 +87,13 @@ MaterialApp.router(
 ### 页面跳转
 
 ```dart
-router.push();  //跳转页面 widget方式
-router.pushNamed(); //跳转页面 路由path方式
-router.replace(); //替换当前页面
-router.popAndPushNamed(); //pop当前页面，然后push一个新页面
-router.pushAndRemoveAll();//清空页面栈并push新页面
-router.pushNamedAndRemoveAll();// 跳转到指定页面，并清空之前的所有页面
-router.pushStackTop();//将页面置于栈顶（如果已存在则先移除）
+router.push(page: const HomePage());  //跳转页面 widget方式
+router.pushNamed(name: '/home'); //跳转页面 路由path方式
+router.replace(page: const HomePage()); //替换当前页面
+router.popAndPushNamed(name: '/home'); //pop当前页面，然后push一个新页面
+router.pushAndRemoveAll(const HomePage()); //清空页面栈并push新页面
+router.pushNamedAndRemoveAll(name: '/home'); //跳转到指定页面，并清空之前的所有页面
+router.pushStackTop(page: const HomePage()); //已废弃：请改用 LaunchMode.singleInstance
 
 //举例：
 router.push(
@@ -273,7 +274,7 @@ router.addRouteGuard((from, to) async {
   final protectedRoutes = ['/profile', '/settings'];
   final isLoggedIn = await checkLoginStatus();
   
-  if (protectedRoutes.contains(to.uri.toString()) && !isLoggedIn) {
+  if (protectedRoutes.contains(normalizeRoutePath(to.uri.path)) && !isLoggedIn) {
     // 拦截跳转，跳转到登录页
     router.pushNamed(name: '/login');
     return false; // 返回false拦截跳转
@@ -349,7 +350,7 @@ router.pushNamed(name: '/not-exist');
 
 ---
 
-## ⚡ 功能三：增强的路由解析器
+## ⚡ 功能二：增强的路由解析器
 
 ### 基本解析器（CustomParser）
 
@@ -381,9 +382,12 @@ final parser = EnhancedParser(
   ],
 );
 
+// 与 RouterProxy 共享解析器，pushNamed() 才能拿到解析后的 state
+router.setRouteInformationParser(parser);
+
 MaterialApp.router(
   routerDelegate: router,
-  routeInformationParser: parser,
+  routeInformationParser: router.defaultParser(),
 );
 ```
 
@@ -400,9 +404,9 @@ final parser = EnhancedParser(
   ],
 );
 
-// 在 routePathCallBack 中获取参数
+// 在 routePathCallback 中获取参数
 RouterProxy.getInstance(
-  routePathCallBack: (routeInfo) {
+  routePathCallback: (routeInfo) {
     final params = RouteParams.fromState(routeInfo.state);
     
     if (params?.matchedPattern == '/user/:id') {
@@ -430,9 +434,9 @@ final parser = EnhancedParser(
   enableQueryParams: true,
 );
 
-// 在 routePathCallBack 中获取参数
+// 在 routePathCallback 中获取参数
 RouterProxy.getInstance(
-  routePathCallBack: (routeInfo) {
+  routePathCallback: (routeInfo) {
     final params = RouteParams.fromState(routeInfo.state);
     
     if (routeInfo.uri.path == '/search') {
@@ -494,7 +498,7 @@ class ProductDetailPage extends StatelessWidget {
   final String? color;
   final String? size;
   
-  // 从 routePathCallBack 传入
+  // 从 routePathCallback 传入
   const ProductDetailPage({
     required this.category,
     required this.productId,
@@ -538,7 +542,7 @@ void handleNotification(String deepLink) {
 
 ---
 
-## ⚡ 功能四：抽屉路由栈
+## ⚡ 功能三：抽屉路由栈
 
 支持在抽屉（Drawer）中创建独立的路由栈，每个抽屉路由栈都拥有完整的路由功能。
 
@@ -671,7 +675,7 @@ router.isMainDrawerOpen(isEndDrawer: true); // 检查右侧抽屉是否打开
 
 ---
 
-## ⚡ 功能五：生命周期感知
+## ⚡ 功能四：生命周期感知
 
 让 **StatelessWidget / StatefulWidget** 具备 `onResume / onPause / onDestroy` 能力：
 
@@ -727,7 +731,7 @@ LifeCycle(
 
 ---
 
-## ⚡ 功能六：可见性检测（VisibilityDetector）
+## ⚡ 功能五：可见性检测（VisibilityDetector）
 
 底层可见性检测组件，支持精确的可见性监控。
 
@@ -858,7 +862,7 @@ void initRouter() {
   // 添加命名路由守卫
   router.addRouteGuard((from, to) async {
     final protectedRoutes = ['/profile', '/settings', '/orders'];
-    if (protectedRoutes.contains(to.uri.toString())) {
+    if (protectedRoutes.contains(normalizeRoutePath(to.uri.path))) {
       final isLoggedIn = await checkLoginStatus();
       if (!isLoggedIn) {
         router.pushNamed(name: '/login');
@@ -1028,6 +1032,28 @@ LifeCycle(
 
 ## 🔄 版本迁移
 
+### 升级到 0.2.2
+
+0.2.2 是一次以正确性与发布加固为主的版本，保持 `0.2.x` 的公开 API 形态。
+
+**本次发布重点：**
+- `EnhancedParser` 解析出的 `state`（路径参数、查询参数、别名）现在会传递给 `routePathCallback`，命名路由不再直接落到 404
+- 守卫在修改页面栈之前只执行一次，被拦截的导航不会丢失当前页面
+- 页面使用唯一 `Key`，修正 `standard` / `singleTop` / `singleInstance` 行为
+- Web 前进/后退与声明式页面栈保持同步
+- 生命周期、可见性检测与抽屉资源释放修复（不再出现 dispose 后回调或静态引用残留）
+- 开启严格静态分析、自动化 CI，并提供 GitHub Pages 在线演示
+
+**升级步骤：**
+```yaml
+dependencies:
+  router_pro: ^0.2.2
+```
+
+```bash
+flutter pub get
+```
+
 ### 升级到 0.2.1
 
 0.2.1 保持了 `0.2.x` 的主要 API 形态，但同步收紧了 SDK 约束，使其与当前实际使用到的 Flutter / Dart API 一致。
@@ -1036,7 +1062,7 @@ LifeCycle(
 - 主路由栈的抽屉方法现在会自动绑定当前页面的 `Scaffold`
 - 已替换废弃的 Navigator 页面回退回调用法
 - 发布元数据、源码注释与示例代码已同步整理
-- 最低支持环境调整为 **Dart 3.4** 与 **Flutter 3.22**
+- 最低支持环境调整为 **Dart 3.4** 与 **Flutter 3.24**
 
 **升级步骤：**
 ```yaml
@@ -1052,6 +1078,8 @@ flutter pub get
 ---
 
 ## 📝 完整示例
+
+🌐 **在线演示：** https://zhengzaihong.github.io/router_lifecycle/
 
 查看 [example/lib/main.dart](example/lib/main.dart) 获取完整的示例代码，包含：
 - ✅ 所有路由启动模式的演示
@@ -1074,10 +1102,17 @@ flutter run
 - `ExitWindow`：可自定义退出程序提示框
 - Web 端：支持浏览器直达，需要自定义 `RouteParser`
 - 完整 API 文档：查看源码注释
+- Web 在线演示：由 `.github/workflows/pages.yml` 从 `example/` 构建部署；首次使用需在仓库 **Settings → Pages → Source** 选择 **GitHub Actions**
 
 ---
 
 ## 📄 更新日志
+
+### v0.2.2
+- 修复动态路由参数传递、守卫重复执行以及拦截导航时页面栈丢失的问题
+- 修正 launchMode、Web 前进/后退与空栈兜底
+- 加固生命周期/可见性回调与抽屉资源释放
+- 开启严格静态分析，补充 CI 与 GitHub Pages 在线演示
 
 ### v0.2.1
 - 主路由栈抽屉控制支持自动绑定当前页面的 `Scaffold`，同时保留 `bindMainScaffoldKey(...)`

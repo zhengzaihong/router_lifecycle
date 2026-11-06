@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:router_pro/router/router_proxy.dart';
 
-
 ///
 /// author:郑再红
 /// email:1096877329@qq.com
@@ -11,7 +10,7 @@ import 'package:router_pro/router/router_proxy.dart';
 /// Default fallback page used when a named route cannot be resolved.
 ///
 class EmptyPage extends StatelessWidget {
-  const EmptyPage({Key? key}) : super(key: key);
+  const EmptyPage({super.key});
 
   @override
   Widget build(BuildContext context) {

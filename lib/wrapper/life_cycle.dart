@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:router_pro/wrapper/visibility_detector.dart';
 
@@ -19,10 +20,9 @@ class LifeCycle extends StatefulWidget {
     this.onDestroy,
     this.visibilityThreshold = 1.0,
     this.debugLabel,
-    Key? key,
-  })  : assert(visibilityThreshold >= 0.0 && visibilityThreshold <= 1.0,
-            'visibilityThreshold must be between 0.0 and 1.0'),
-        super(key: key);
+    super.key,
+  }) : assert(visibilityThreshold >= 0.0 && visibilityThreshold <= 1.0,
+            'visibilityThreshold must be between 0.0 and 1.0');
 
   /// 子组件
   final Widget child;
@@ -139,7 +139,9 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
     }
 
     final wasFullyVisible = _isWidgetVisible;
-    final isFullyVisible = newVisibleFraction >= widget.visibilityThreshold;
+    // 阈值可能为 0.0，此时仍要求实际可见比例大于 0，避免 0% 可见时触发 onResume。
+    final isFullyVisible = newVisibleFraction > 0 &&
+        newVisibleFraction >= widget.visibilityThreshold;
 
     if (!wasFullyVisible && isFullyVisible) {
       _isWidgetVisible = true;
@@ -148,7 +150,8 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
       widget.onResume?.call();
     }
 
-    final isFullyInvisible = newVisibleFraction < widget.visibilityThreshold;
+    final isFullyInvisible = newVisibleFraction <= 0 ||
+        newVisibleFraction < widget.visibilityThreshold;
     if (wasFullyVisible && isFullyInvisible && !_isExit) {
       _isWidgetVisible = false;
       _debugLog(
@@ -158,13 +161,16 @@ class _LifeCycleState extends State<LifeCycle> with WidgetsBindingObserver {
   }
 
   void _debugLog(String message) {
-    if (widget.debugLabel != null) {
+    if (kDebugMode && widget.debugLabel != null) {
       debugPrint('[LifeCycle:${widget.debugLabel}] $message');
     }
   }
 
   @override
   void dispose() {
+    // 移除可见性检测缓存，避免 dispose 之后仍触发回调。
+    VisibilityDetectorController.instance.forget(_visibilityDetectorKey);
+
     if (_isWidgetVisible) {
       _isExit = true;
       _debugLog('onPause (disposing)');

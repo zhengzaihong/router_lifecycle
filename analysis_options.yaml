@@ -1,3 +1,12 @@
+analyzer:
+  exclude:
+    - build/**
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    deprecated_member_use: warning
 include: package:flutter_lints/flutter.yaml
 
 # Additional information about this file can be found at

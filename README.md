@@ -3,6 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/router_pro.svg)](https://pub.dev/packages/router_pro)
 [![GitHub stars](https://img.shields.io/github/stars/zhengzaihong/router_lifecycle.svg?style=social)](https://github.com/zhengzaihong/router_lifecycle)
 [![license](https://img.shields.io/github/license/zhengzaihong/router_lifecycle)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f)](https://zhengzaihong.github.io/router_lifecycle/)
 
 Language: English | [简体中文](README-ZH.md)
 
@@ -53,7 +54,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  router_pro: ^0.2.1
+  router_pro: ^0.2.2
 ```
 
 Import:
@@ -64,7 +65,7 @@ import 'package:router_pro/router_lib.dart';
 
 ---
 
-## ⚡ Function 1: RouterProxy
+## ⚡ Feature 1: RouterProxy
 
 ### global registration
 
@@ -86,13 +87,13 @@ MaterialApp.router(
 ### page skip
 
 ```dart
-router.push();  //Jump to page widget method
-router.pushNamed(); //Jump page routing path method
-router.replace(); //Replace current page
-router.popAndPushNamed(); //Pop the current page, then push a new page
-router.pushAndRemoveAll();//Empty the page stack and push new page
-router.pushNamedAndRemoveAll();// Skip to the specified page and clear all previous pages
-router.pushStackTop();//Place the page at the top of the stack (remove it first if it already exists)
+router.push(page: const HomePage());  //Jump to page widget method
+router.pushNamed(name: '/home'); //Jump page routing path method
+router.replace(page: const HomePage()); //Replace current page
+router.popAndPushNamed(name: '/home'); //Pop the current page, then push a new page
+router.pushAndRemoveAll(const HomePage()); //Empty the page stack and push new page
+router.pushNamedAndRemoveAll(name: '/home'); //Skip to the specified page and clear all previous pages
+router.pushStackTop(page: const HomePage()); //Deprecated: use LaunchMode.singleInstance instead
 
 //example：
 router.push(
@@ -273,7 +274,7 @@ router.addRouteGuard((from, to) async {
   final protectedRoutes = ['/profile', '/settings'];
   final isLoggedIn = await checkLoginStatus();
   
-  if (protectedRoutes.contains(to.uri.toString()) && !isLoggedIn) {
+  if (protectedRoutes.contains(normalizeRoutePath(to.uri.path)) && !isLoggedIn) {
     // Intercept navigation, redirect to login page
     router.pushNamed(name: '/login');
     return false; // Return false to block navigation
@@ -349,7 +350,7 @@ router.pushNamed(name: '/not-exist');
 
 ---
 
-## ⚡ Feature 3: Enhanced Route Parser
+## ⚡ Feature 2: Enhanced Route Parser
 
 ### Basic Parser (CustomParser)
 
@@ -381,9 +382,12 @@ final parser = EnhancedParser(
   ],
 );
 
+// Share the parser with RouterProxy so pushNamed() carries parsed state.
+router.setRouteInformationParser(parser);
+
 MaterialApp.router(
   routerDelegate: router,
-  routeInformationParser: parser,
+  routeInformationParser: router.defaultParser(),
 );
 ```
 
@@ -400,9 +404,9 @@ final parser = EnhancedParser(
   ],
 );
 
-// Get parameters in routePathCallBack
+// Get parameters in routePathCallback
 RouterProxy.getInstance(
-  routePathCallBack: (routeInfo) {
+  routePathCallback: (routeInfo) {
     final params = RouteParams.fromState(routeInfo.state);
     
     if (params?.matchedPattern == '/user/:id') {
@@ -430,9 +434,9 @@ final parser = EnhancedParser(
   enableQueryParams: true,
 );
 
-// Get parameters in routePathCallBack
+// Get parameters in routePathCallback
 RouterProxy.getInstance(
-  routePathCallBack: (routeInfo) {
+  routePathCallback: (routeInfo) {
     final params = RouteParams.fromState(routeInfo.state);
     
     if (routeInfo.uri.path == '/search') {
@@ -522,7 +526,7 @@ void handleNotification(String deepLink) {
 
 ---
 
-## ⚡ Feature 4: Drawer Router Stack
+## ⚡ Feature 3: Drawer Router Stack
 
 Support creating independent router stacks within drawers, each with complete routing functionality.
 
@@ -655,7 +659,7 @@ Main-stack drawer methods now auto-bind to the current page's `Scaffold`. `bindM
 
 ---
 
-## ⚡ Feature 5: Lifecycle Awareness
+## ⚡ Feature 4: Lifecycle Awareness
 
 Make **StatelessWidget / StatefulWidget** have `onResume / onPause / onDestroy` ability：
 
@@ -711,7 +715,7 @@ LifeCycle(
 
 ---
 
-## ⚡ Function 6: Visibility Detection
+## ⚡ Feature 5: Visibility Detection
 
 Low-level visibility detection component for precise visibility monitoring.
 
@@ -841,7 +845,7 @@ void initRouter() {
   // Add login verification guard
   router.addRouteGuard((from, to) async {
     final protectedRoutes = ['/profile', '/settings', '/orders'];
-    if (protectedRoutes.contains(to.uri.toString())) {
+    if (protectedRoutes.contains(normalizeRoutePath(to.uri.path))) {
       final isLoggedIn = await checkLoginStatus();
       if (!isLoggedIn) {
         router.pushNamed(name: '/login');
@@ -983,6 +987,28 @@ LifeCycle(
 
 ## 🔄 Migration Guide
 
+### Upgrading to 0.2.2
+
+Version 0.2.2 is a correctness and release-hardening release. The public API of the `0.2.x` line is preserved.
+
+**Release highlights:**
+- `EnhancedParser` state (path params, query params, aliases) is now delivered to `routePathCallback`; named routes no longer fall through to 404
+- Guards run once, before the page stack is mutated, so rejected navigation keeps the current page
+- Unique page keys and corrected `standard` / `singleTop` / `singleInstance` behavior
+- Web back/forward keeps the declarative page stack in sync
+- Lifecycle, visibility detection, and drawer teardown fixes (no post-dispose callbacks or stale static references)
+- Strict static analysis, automated CI, and a live web demo on GitHub Pages
+
+**Upgrade Steps:**
+```yaml
+dependencies:
+  router_pro: ^0.2.2
+```
+
+```bash
+flutter pub get
+```
+
 ### Upgrading to 0.2.1
 
 Version 0.2.1 keeps the `0.2.x` API surface intact while tightening SDK requirements to match the APIs used by the package.
@@ -991,7 +1017,7 @@ Version 0.2.1 keeps the `0.2.x` API surface intact while tightening SDK requirem
 - Main-stack drawer helpers now auto-bind to the current page's `Scaffold`
 - Deprecated Navigator callback usage has been replaced with current APIs
 - Package metadata and example code have been cleaned up for publishing
-- Minimum supported environment is now **Dart 3.4** and **Flutter 3.22**
+- Minimum supported environment is now **Dart 3.4** and **Flutter 3.24**
 
 **Upgrade Steps:**
 ```yaml
@@ -1007,6 +1033,8 @@ flutter pub get
 ---
 
 ## 📝 Complete Example
+
+🌐 **Live demo:** https://zhengzaihong.github.io/router_lifecycle/
 
 See [example/lib/main.dart](example/lib/main.dart) for complete example code, including:
 - ✅ All route launch mode demonstrations
@@ -1029,10 +1057,17 @@ flutter run
 - `ExitWindow`: Customizable prompt box to exit the program
 - Web side: Support browser direct access, need to customize `RouteParser`
 - Complete API documentation: See source code comments
+- Web demo: deployed from `example/` by `.github/workflows/pages.yml`. Enable **Settings → Pages → Source: GitHub Actions** once in the repository
 
 ---
 
 ## 📄 Changelog
+
+### v0.2.2
+- Fixed dynamic route parameter delivery, duplicate guard execution, and page-stack loss on rejected navigation
+- Corrected launch modes, Web back/forward handling, and empty-stack fallback
+- Hardened lifecycle/visibility callbacks and drawer resource cleanup
+- Added strict static analysis, automated CI, and a GitHub Pages live demo
 
 ### v0.2.1
 - Added automatic main-stack drawer `Scaffold` binding while preserving `bindMainScaffoldKey(...)`

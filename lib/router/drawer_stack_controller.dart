@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'router_proxy.dart';
 import 'drawer_config.dart';
@@ -35,12 +36,21 @@ class DrawerStackController {
   /// Scaffold 的 GlobalKey，用于访问 ScaffoldState
   /// The scaffold key used to access the host [ScaffoldState].
   final GlobalKey<ScaffoldState> scaffoldKey;
+
   /// 底层的 RouterProxy 实例，管理页面栈
   /// The router instance that owns the drawer page stack.
   final RouterProxy routerProxy;
+
   /// 抽屉配置
   /// Drawer behavior settings.
   final DrawerConfig config;
+
+  /// 是否输出调试日志。release 下默认关闭。
+  static bool debugLogging = kDebugMode;
+
+  bool _disposed = false;
+  bool _openScheduled = false;
+  bool _closeScheduled = false;
 
   DrawerStackController({
     required this.scaffoldKey,
@@ -51,23 +61,40 @@ class DrawerStackController {
   }
 
   void _onRouteChanged() {
-    if (config.autoOpen && routerProxy.pages.isNotEmpty) {
+    if (_disposed) {
+      return;
+    }
+
+    if (config.autoOpen && routerProxy.pages.isNotEmpty && !_openScheduled) {
+      _openScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openScheduled = false;
+        if (_disposed) return;
         _openDrawer();
       });
     }
 
-    if (config.autoClose && routerProxy.pages.length <= 1) {
+    if (config.autoClose && routerProxy.pages.length <= 1 && !_closeScheduled) {
+      _closeScheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _closeScheduled = false;
+        if (_disposed) return;
         _closeDrawer();
       });
     }
   }
 
+  void _log(String message) {
+    if (debugLogging) {
+      debugPrint('[DrawerStackController] $message');
+    }
+  }
+
   void _openDrawer() {
+    if (_disposed) return;
     final state = scaffoldKey.currentState;
     if (state == null) {
-      debugPrint('[DrawerStackController] ScaffoldState not available');
+      _log('ScaffoldState not available');
       return;
     }
 
@@ -82,14 +109,15 @@ class DrawerStackController {
         }
       }
     } catch (e) {
-      debugPrint('[DrawerStackController] Error opening drawer: $e');
+      _log('Error opening drawer: $e');
     }
   }
 
   void _closeDrawer() {
+    if (_disposed) return;
     final state = scaffoldKey.currentState;
     if (state == null) {
-      debugPrint('[DrawerStackController] ScaffoldState not available');
+      _log('ScaffoldState not available');
       return;
     }
 
@@ -104,19 +132,22 @@ class DrawerStackController {
         }
       }
     } catch (e) {
-      debugPrint('[DrawerStackController] Error closing drawer: $e');
+      _log('Error closing drawer: $e');
     }
   }
+
   /// 手动打开抽屉
   /// Opens the drawer manually.
   void openDrawer() {
     _openDrawer();
   }
+
   /// 手动关闭抽屉
   /// Closes the drawer manually.
   void closeDrawer() {
     _closeDrawer();
   }
+
   /// 检查抽屉是否打开
   /// Returns whether the configured drawer is currently open.
   bool get isDrawerOpen {
@@ -143,7 +174,7 @@ class DrawerStackController {
     Object? arguments,
     ResultCallback? onResult,
   }) {
-    debugPrint('[DrawerStackController] push called: ${page.runtimeType}');
+    _log('push called: ${page.runtimeType}');
     return routerProxy.push(
       page: page,
       name: name,
@@ -151,6 +182,7 @@ class DrawerStackController {
       onResult: onResult,
     );
   }
+
   /// 根据名称推入新页面
   /// Pushes a named page onto the drawer stack.
   Future<void> pushNamed({
@@ -158,30 +190,40 @@ class DrawerStackController {
     Object? arguments,
     ResultCallback? onResult,
   }) {
-    debugPrint('[DrawerStackController] pushNamed called: $name');
+    _log('pushNamed called: $name');
     return routerProxy.pushNamed(
       name: name,
       arguments: arguments,
       onResult: onResult,
     );
   }
+
   /// 弹出当前页面
   /// Pops the current page from the drawer stack.
-  void pop<T>([T? result]) {
-    debugPrint('[DrawerStackController] pop called');
+  void pop([Object? result]) {
+    _log('pop called');
     routerProxy.pop(result);
   }
+
   /// 获取当前页面栈
   /// Exposes the current drawer page stack.
-  List<MaterialPage> get pages => routerProxy.pages;
+  List<MaterialPage<Object?>> get pages => routerProxy.pages;
 
   /// Builds the drawer navigator widget tree.
   Widget build(BuildContext context) {
     return routerProxy.build(context);
   }
+
   /// 清理资源
-  /// Removes internal listeners.
-  void dispose() {
+  ///
+  /// 默认只移除内部监听器。若该 controller 拥有 [routerProxy]，
+  /// 可传入 `disposeRouter: true` 一并释放路由栈。
+  void dispose({bool disposeRouter = false}) {
+    if (_disposed) return;
+    _disposed = true;
     routerProxy.removeListener(_onRouteChanged);
+    if (disposeRouter) {
+      routerProxy.dispose();
+    }
   }
 }

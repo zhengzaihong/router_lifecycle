@@ -354,7 +354,9 @@ Matrix4 _accumulateTransforms(Iterable<Layer> layerChain) {
 
   var parent = layerChain.first;
   for (final child in layerChain.skip(1)) {
-    (parent as ContainerLayer).applyTransform(child, transform);
+    if (parent is ContainerLayer) {
+      parent.applyTransform(child, transform);
+    }
     parent = child;
   }
   return transform;
@@ -364,12 +366,14 @@ Matrix4 _accumulateTransforms(Iterable<Layer> layerChain) {
 /// [Rect] in global coordinates.
 Rect _localRectToGlobal(Layer layer, Rect localRect) {
   final layerChain = _getLayerChain(layer);
+  if (layerChain.isEmpty) {
+    return localRect;
+  }
 
   // Skip the root layer which transforms from logical pixels to physical
   // device pixels.
-  assert(layerChain.isNotEmpty);
-  assert(layerChain.first is TransformLayer);
-  final transform = _accumulateTransforms(layerChain.skip(1));
+  final startIndex = layerChain.first is TransformLayer ? 1 : 0;
+  final transform = _accumulateTransforms(layerChain.skip(startIndex));
   return MatrixUtils.transformRect(transform, localRect);
 }
 
@@ -389,6 +393,10 @@ class VisibilityDetectorLayer extends ContainerLayer {
 
   /// Timer used by [_scheduleUpdate].
   static Timer? _timer;
+
+  /// Prevents re-entrant callback processing when a callback calls
+  /// [notifyNow] or otherwise triggers another update.
+  static bool _isProcessing = false;
 
   /// Keeps track of [VisibilityDetectorLayer] objects that have been recently
   /// updated and that might need to report visibility changes.
@@ -537,23 +545,35 @@ class VisibilityDetectorLayer extends ContainerLayer {
   /// Executes visibility callbacks for all updated [VisibilityDetectorLayer]
   /// instances.
   static void _processCallbacks() {
-    for (final layer in _updated.values) {
-      if (!layer.attached) {
-        layer._fireCallback(VisibilityInfo(
-            key: layer.key, size: _lastVisibility[layer.key]?.size));
-        continue;
-      }
-
-      final widgetBounds = layer._computeWidgetBounds();
-      _lastBounds[layer.key] = widgetBounds;
-
-      final info = VisibilityInfo.fromRects(
-          key: layer.key,
-          widgetBounds: widgetBounds,
-          clipRect: layer._computeClipRect());
-      layer._fireCallback(info);
+    if (_isProcessing) {
+      return;
     }
+    _isProcessing = true;
+
+    // 先快照并清空，避免回调中调用 forget/notifyNow 修改集合导致并发修改异常。
+    final layers = _updated.values.toList(growable: false);
     _updated.clear();
+
+    try {
+      for (final layer in layers) {
+        if (!layer.attached) {
+          layer._fireCallback(VisibilityInfo(
+              key: layer.key, size: _lastVisibility[layer.key]?.size));
+          continue;
+        }
+
+        final widgetBounds = layer._computeWidgetBounds();
+        _lastBounds[layer.key] = widgetBounds;
+
+        final info = VisibilityInfo.fromRects(
+            key: layer.key,
+            widgetBounds: widgetBounds,
+            clipRect: layer._computeClipRect());
+        layer._fireCallback(info);
+      }
+    } finally {
+      _isProcessing = false;
+    }
   }
 
   /// Invokes the visibility callback if [VisibilityInfo] hasn't meaningfully
@@ -663,31 +683,38 @@ class RenderSliverVisibilityDetector extends RenderProxySliver {
 
     Size widgetSize;
     Offset widgetOffset;
+    final geometry = this.geometry;
+    if (geometry == null) {
+      VisibilityDetectorLayer.forget(key);
+      super.paint(context, offset);
+      return;
+    }
+
     switch (applyGrowthDirectionToAxisDirection(
       constraints.axisDirection,
       constraints.growthDirection,
     )) {
       case AxisDirection.down:
         widgetOffset = Offset(0, -constraints.scrollOffset);
-        widgetSize = Size(constraints.crossAxisExtent, geometry!.scrollExtent);
+        widgetSize = Size(constraints.crossAxisExtent, geometry.scrollExtent);
         break;
       case AxisDirection.up:
-        final startOffset = geometry!.paintExtent +
+        final startOffset = geometry.paintExtent +
             constraints.scrollOffset -
-            geometry!.scrollExtent;
+            geometry.scrollExtent;
         widgetOffset = Offset(0, min(startOffset, 0));
-        widgetSize = Size(constraints.crossAxisExtent, geometry!.scrollExtent);
+        widgetSize = Size(constraints.crossAxisExtent, geometry.scrollExtent);
         break;
       case AxisDirection.right:
         widgetOffset = Offset(-constraints.scrollOffset, 0);
-        widgetSize = Size(geometry!.scrollExtent, constraints.crossAxisExtent);
+        widgetSize = Size(geometry.scrollExtent, constraints.crossAxisExtent);
         break;
       case AxisDirection.left:
-        final startOffset = geometry!.paintExtent +
+        final startOffset = geometry.paintExtent +
             constraints.scrollOffset -
-            geometry!.scrollExtent;
+            geometry.scrollExtent;
         widgetOffset = Offset(min(startOffset, 0), 0);
-        widgetSize = Size(geometry!.scrollExtent, constraints.crossAxisExtent);
+        widgetSize = Size(geometry.scrollExtent, constraints.crossAxisExtent);
         break;
     }
 

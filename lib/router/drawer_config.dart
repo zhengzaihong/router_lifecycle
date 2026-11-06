@@ -1,4 +1,3 @@
-
 /// author:郑再红
 /// email:1096877329@qq.com
 /// date:2026-04-30 10:00
@@ -10,9 +9,11 @@ class DrawerConfig {
   /// 是否自动打开抽屉（首次 push 时）
   /// Whether to open the drawer automatically when the stack becomes active.
   final bool autoOpen;
+
   /// 是否自动关闭抽屉（栈为空时）
   /// Whether to close the drawer automatically when only the root page remains.
   final bool autoClose;
+
   /// 是否为右侧抽屉（endDrawer）
   /// true: 右侧抽屉（endDrawer）
   /// false: 左侧抽屉（drawer）
