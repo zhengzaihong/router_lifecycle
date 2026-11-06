@@ -9,6 +9,10 @@ Language: English | [简体中文](README-ZH.md)
 
 ---
 
+## 📝 Example
+
+🌐 **Live demo:** https://zhengzaihong.github.io/router_lifecycle/
+
 ## ✨ Overview
 
 **Router Pro** is a powerful Flutter routing framework that combines **Navigator 2.0** with **lifecycle awareness**, providing Android-like lifecycle capabilities and advanced routing features.
@@ -1032,25 +1036,6 @@ flutter pub get
 
 ---
 
-## 📝 Complete Example
-
-🌐 **Live demo:** https://zhengzaihong.github.io/router_lifecycle/
-
-See [example/lib/main.dart](example/lib/main.dart) for complete example code, including:
-- ✅ All route launch mode demonstrations
-- ✅ Named route value return
-- ✅ Route guard interception
-- ✅ 404 error page
-- ✅ Lifecycle awareness
-- ✅ Visibility detection use cases
-
-Run example:
-```bash
-cd example
-flutter run
-```
-
----
 
 ## 🛠 other explanatory
 

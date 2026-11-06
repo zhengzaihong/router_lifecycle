@@ -9,6 +9,10 @@
 
 ---
 
+## 📝 示例
+
+🌐 **在线演示：** https://zhengzaihong.github.io/router_lifecycle/
+
 ## ✨ 概述
 
 **Router Pro** 是一个强大的 Flutter 路由框架，结合了 **Navigator 2.0** 和**生命周期感知**，提供类似 Android 的生命周期能力和高级路由功能。
@@ -1077,25 +1081,7 @@ flutter pub get
 
 ---
 
-## 📝 完整示例
 
-🌐 **在线演示：** https://zhengzaihong.github.io/router_lifecycle/
-
-查看 [example/lib/main.dart](example/lib/main.dart) 获取完整的示例代码，包含：
-- ✅ 所有路由启动模式的演示
-- ✅ 命名路由值回传
-- ✅ 路由守卫拦截
-- ✅ 404错误页面
-- ✅ 生命周期感知
-- ✅ 可见性检测应用场景
-
-运行示例：
-```bash
-cd example
-flutter run
-```
-
----
 
 ## 🛠 其他说明
 
